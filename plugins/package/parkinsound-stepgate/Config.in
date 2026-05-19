@@ -1,0 +1,12 @@
+config BR2_PACKAGE_PARKINSOUND_STEPGATE
+	bool "parkinsound-stepgate"
+	help
+	  Parkinsound Step Gate - a 16-step audio gate sequencer LV2
+	  plugin for MOD devices.
+
+	  Each step exposes an On/Off toggle and a Tie toggle (legato vs.
+	  half-step cut). The step clock follows the host BPM via the LV2
+	  time:Position extension, with a tempo control fallback for free
+	  running operation.
+
+	  https://github.com/pilali/Parkinsound
