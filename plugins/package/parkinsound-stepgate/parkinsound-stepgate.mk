@@ -12,7 +12,7 @@
 # downloaded by Buildroot is reproducible.
 ################################################################################
 
-PARKINSOUND_STEPGATE_VERSION = da158fe0f17de22cd6adb25195e440982cf1e4c6
+PARKINSOUND_STEPGATE_VERSION = 03eaef6aa92c3e058936b0b5e8a2062f1bc67b7e
 PARKINSOUND_STEPGATE_SITE = $(call github,pilali,Parkinsound,$(PARKINSOUND_STEPGATE_VERSION))
 PARKINSOUND_STEPGATE_BUNDLES = parkinsound-stepgate.lv2
 
