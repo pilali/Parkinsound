@@ -1,0 +1,66 @@
+/* Parkinsound Step Gate modgui styles
+ *
+ * Layout intentionally kept square (matches the user's "carré noir"
+ * design brief). The pedal area is dimensioned via mod-pedal-* classes
+ * but its visual content is the SVG ring, sized in viewBox units. */
+
+.parkinsound-stepgate-pedal {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    background: #000;
+    color: #fff;
+    font-family: sans-serif;
+}
+
+.parkinsound-stepgate-pedal .parkinsound-stepgate-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: block;
+}
+
+.parkinsound-stepgate-pedal .bg {
+    fill: #000;
+}
+
+/* --- Step ring (inner, thick, gapped) --- */
+.parkinsound-stepgate-pedal .step {
+    cursor: pointer;
+    stroke: none;
+    transition: fill 60ms linear, filter 60ms linear;
+}
+.parkinsound-stepgate-pedal .step.off {
+    fill: #4a4a4a;
+}
+.parkinsound-stepgate-pedal .step.on {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 4px #ffffff)
+            drop-shadow(0 0 8px rgba(255,255,255,0.6));
+}
+
+/* --- Tie ring (outer, thin, continuous) --- */
+.parkinsound-stepgate-pedal .tie {
+    cursor: pointer;
+    stroke: none;
+    transition: fill 60ms linear, filter 60ms linear;
+}
+.parkinsound-stepgate-pedal .tie.off {
+    fill: #3a3a3a;
+}
+.parkinsound-stepgate-pedal .tie.on {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 3px #ffffff)
+            drop-shadow(0 0 6px rgba(255,255,255,0.55));
+}
+
+/* Pulse the currently-playing step. The JS adds a .playing class. */
+.parkinsound-stepgate-pedal .step.playing {
+    filter: drop-shadow(0 0 6px #ffffff)
+            drop-shadow(0 0 14px rgba(255,255,255,0.85));
+}
+
+/* Hidden input hooks used to talk to mod-ui's port system. */
+.parkinsound-stepgate-pedal .port-hooks {
+    display: none;
+}

@@ -1,0 +1,54 @@
+<div class="parkinsound-stepgate-pedal mod-pedal" mod-role="main-body">
+
+    <svg class="parkinsound-stepgate-svg"
+         viewBox="0 0 200 200"
+         preserveAspectRatio="xMidYMid meet"
+         xmlns="http://www.w3.org/2000/svg">
+        <rect class="bg" x="0" y="0" width="200" height="200"></rect>
+        <g class="tie-ring"></g>
+        <g class="step-ring"></g>
+    </svg>
+
+    <!--
+        Hidden input hooks: mod-ui scans for [mod-role] elements at icon
+        render time to wire each control port. The JS writes to these
+        hooks (with .val(x).change()) to push step toggles back to the
+        host. Mustache fills the initial values from the host snapshot.
+    -->
+    <div class="port-hooks">
+        <input mod-role="input-control-port" mod-port-symbol="step_1_on"  value="{{ports.step_1_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_1_tie" value="{{ports.step_1_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_2_on"  value="{{ports.step_2_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_2_tie" value="{{ports.step_2_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_3_on"  value="{{ports.step_3_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_3_tie" value="{{ports.step_3_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_4_on"  value="{{ports.step_4_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_4_tie" value="{{ports.step_4_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_5_on"  value="{{ports.step_5_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_5_tie" value="{{ports.step_5_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_6_on"  value="{{ports.step_6_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_6_tie" value="{{ports.step_6_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_7_on"  value="{{ports.step_7_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_7_tie" value="{{ports.step_7_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_8_on"  value="{{ports.step_8_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_8_tie" value="{{ports.step_8_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_9_on"  value="{{ports.step_9_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_9_tie" value="{{ports.step_9_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_10_on"  value="{{ports.step_10_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_10_tie" value="{{ports.step_10_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_11_on"  value="{{ports.step_11_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_11_tie" value="{{ports.step_11_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_12_on"  value="{{ports.step_12_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_12_tie" value="{{ports.step_12_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_13_on"  value="{{ports.step_13_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_13_tie" value="{{ports.step_13_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_14_on"  value="{{ports.step_14_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_14_tie" value="{{ports.step_14_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_15_on"  value="{{ports.step_15_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_15_tie" value="{{ports.step_15_tie.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_16_on"  value="{{ports.step_16_on.value}}"/>
+        <input mod-role="input-control-port" mod-port-symbol="step_16_tie" value="{{ports.step_16_tie.value}}"/>
+        <input mod-role="output-control-port" mod-port-symbol="current_step" value="{{ports.current_step.value}}"/>
+    </div>
+
+</div>

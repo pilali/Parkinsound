@@ -18,7 +18,9 @@ override LDFLAGS += -shared
 INSTALL_PATH ?= /usr/lib/lv2
 DESTDIR      ?=
 
-.PHONY: all clean install
+.PHONY: all clean install bump-recipe
+
+RECIPE_MK = plugins/package/parkinsound-stepgate/parkinsound-stepgate.mk
 
 all: $(TARGET)
 
@@ -33,3 +35,20 @@ install: all
 	install -m 644 $(BUNDLE)/manifest.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 644 $(BUNDLE)/stepgate.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 755 $(BUNDLE)/stepgate.so  $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
+
+# Rewrites PARKINSOUND_STEPGATE_VERSION in the mod-plugin-builder recipe
+# to point at the current git HEAD. Run AFTER committing your source
+# changes, then commit the recipe bump as its own follow-up commit:
+#
+#   git commit -m "Source changes"
+#   make bump-recipe
+#   git add $(RECIPE_MK) && git commit -m "Bump recipe to <hash>"
+bump-recipe:
+	@hash=$$(git rev-parse HEAD); \
+	if [ -z "$$hash" ]; then \
+		echo "error: not a git repository"; exit 1; \
+	fi; \
+	sed -i.bak "s|^PARKINSOUND_STEPGATE_VERSION = .*|PARKINSOUND_STEPGATE_VERSION = $$hash|" $(RECIPE_MK); \
+	rm -f $(RECIPE_MK).bak; \
+	echo "Recipe bumped to $$hash"; \
+	echo "Stage with: git add $(RECIPE_MK)"
