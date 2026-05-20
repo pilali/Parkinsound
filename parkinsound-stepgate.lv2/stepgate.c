@@ -247,8 +247,8 @@ run(LV2_Handle instance, uint32_t n_samples)
         }
     }
 
-    const int   sync       = self->sync_source ? (int)*self->sync_source : 0;
-    const float tempo_ctrl = self->tempo       ? *self->tempo            : 120.0f;
+    const int   sync       = self->sync_source ? (int)lroundf(*self->sync_source) : 0;
+    const float tempo_ctrl = self->tempo       ? *self->tempo                     : 120.0f;
     const int   host_sync  = (sync == 0);
     const int   enabled    = (!self->enabled_port) || (*self->enabled_port > 0.5f);
 
@@ -269,7 +269,7 @@ run(LV2_Handle instance, uint32_t n_samples)
      * 4 = 1/16 sixteenth  = 0.25
      * 5 = 1/32            = 0.125 */
     static const double div_factor[6] = { 4.0, 2.0, 1.0, 0.5, 0.25, 0.125 };
-    int div = self->division ? (int)*self->division : 4;
+    int div = self->division ? (int)lroundf(*self->division) : 4;
     if (div < 0) div = 0;
     if (div > 5) div = 5;
     const double step_in_beats = div_factor[div];
