@@ -1,16 +1,17 @@
 /*
  * Parkinsound Step Gate - modgui controller.
  *
- * The visible SVG ring is cosmetic: each step and tie path is bound
- * to the matching hidden .mod-toggle-image widget (declared in the
- * HTML template), and clicking a path simply $.triggers('click') on
- * its hook. mod-ui's built-in toggle handler then writes the new
- * value to mod-host. We listen for the 'change' callback to keep the
- * ring's visual state in sync with the host.
+ * The visible SVG ring is the only UI. Each clickable path pushes
+ * its new value through funcs.set_port_value(symbol, value), which
+ * mod-ui's modgui.js wraps as setPortValue(..., "from-js"). That
+ * "from-js" source bypasses the addressing block that would
+ * otherwise reject programmatic writes routed through standard
+ * widgets. Visual state stays in sync via the 'change' event that
+ * mod-ui dispatches whenever a port value moves at the host.
  *
  * Step 1 begins just past 12 o'clock and the ring advances clockwise.
  */
-function (event) {
+function (event, funcs) {
     var NS         = 'http://www.w3.org/2000/svg';
     var CX         = 100, CY = 100;
     var STEP_OUTER = 80,  STEP_INNER = 50;
@@ -94,9 +95,7 @@ function (event) {
 
         /* mod-ui's drag-handler hooks mousedown on the pedal. If we
          * don't stop the mousedown here, the drag starts and the
-         * subsequent click never fires. Stopping propagation in the
-         * bubble phase, on the SVG element itself, runs before the
-         * pedal-level listener. */
+         * subsequent click never fires. */
         svg.addEventListener('mousedown', function (e) {
             if (e.target.closest('[data-symbol]')) {
                 e.stopPropagation();
@@ -112,15 +111,18 @@ function (event) {
             var node = e.target.closest('[data-symbol]');
             if (!node) return;
             var symbol = node.getAttribute('data-symbol');
-            /* Forward the click to mod-ui's standard toggle widget.
-             * That widget owns the value state and the host comms. */
-            var hook = rootEl.find(
-                '.mod-toggle-image[mod-role="input-control-port"]' +
-                '[mod-port-symbol="' + symbol + '"]'
-            );
-            if (hook.length) {
-                hook.trigger('click');
+            var current = node.classList.contains('on') ? 1 : 0;
+            var next    = 1 - current;
+            /* Push to mod-host via the canonical modgui callback.
+             * mod-ui wraps this as setPortValue(..., "from-js"),
+             * which is exempt from the addressing-blocked check. */
+            if (funcs && typeof funcs.set_port_value === 'function') {
+                funcs.set_port_value(symbol, next);
             }
+            /* Optimistic visual update; the real value will round-trip
+             * through mod-host and arrive as a 'change' event shortly. */
+            node.classList.toggle('on',  next === 1);
+            node.classList.toggle('off', next === 0);
             e.stopPropagation();
             e.preventDefault();
         });

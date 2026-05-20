@@ -79,14 +79,3 @@
             drop-shadow(0 0 14px rgba(255,255,255,0.85));
 }
 
-/* Hidden mod-ui toggle widgets: mod-ui's JS needs them in the DOM but
- * the user never sees or clicks them - the SVG paths above proxy clicks
- * via $.trigger('click'). */
-.parkinsound-stepgate-pedal .step-port-hooks {
-    position: absolute;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-    visibility: hidden;
-    pointer-events: none;
-}
