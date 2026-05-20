@@ -88,7 +88,36 @@ function (event) {
         }
     }
 
-    function wireClicks(rootEl) {
+    /* Push a port value back to mod-host. mod-ui versions differ in
+     * how they listen for control-port writes from custom modguis, so
+     * we try every well-known mechanism. */
+    function pushPortValue(rootEl, symbol, value, funcs) {
+        /* 1. funcs callback API (newer mod-ui versions) */
+        if (funcs) {
+            if (typeof funcs.change_port_value === 'function') {
+                funcs.change_port_value(symbol, value);
+            } else if (typeof funcs.setPortWidgetsValue === 'function') {
+                funcs.setPortWidgetsValue(symbol, value);
+            } else if (typeof funcs.set_port === 'function') {
+                funcs.set_port(symbol, value);
+            }
+        }
+        /* 2. Hidden hook input - jQuery .val().change() (classic API) */
+        var hook = rootEl.find(
+            '[mod-role="input-control-port"][mod-port-symbol="' + symbol + '"]'
+        );
+        if (hook.length) {
+            hook.val(value).trigger('change').trigger('input');
+            /* 3. Native DOM events as a last-resort backup */
+            try {
+                hook[0].value = value;
+                hook[0].dispatchEvent(new Event('change', { bubbles: true }));
+                hook[0].dispatchEvent(new Event('input',  { bubbles: true }));
+            } catch (e) { /* old browsers */ }
+        }
+    }
+
+    function wireClicks(rootEl, funcs) {
         var svg = rootEl.find('.parkinsound-stepgate-svg')[0];
         svg.addEventListener('click', function (e) {
             var node = e.target.closest('[data-symbol]');
@@ -96,16 +125,10 @@ function (event) {
             var symbol = node.getAttribute('data-symbol');
             var current = node.classList.contains('on') ? 1 : 0;
             var next    = 1 - current;
-            /* Optimistic update so the click feels instant. */
+            /* Optimistic UI update so the click feels instant. */
             node.classList.toggle('on',  next === 1);
             node.classList.toggle('off', next === 0);
-            /* Push back to mod-ui via the hidden hook input. */
-            var hook = rootEl.find(
-                '[mod-role="input-control-port"][mod-port-symbol="' + symbol + '"]'
-            );
-            if (hook.length) {
-                hook.val(next).change();
-            }
+            pushPortValue(rootEl, symbol, next, funcs);
             e.stopPropagation();
             e.preventDefault();
         });
@@ -114,7 +137,7 @@ function (event) {
     if (event.type === 'start') {
         var icon = $(event.icon);
         buildRings(icon);
-        wireClicks(icon);
+        wireClicks(icon, funcs);
 
         /* Apply the snapshot of port values mod-ui gave us at start. */
         if (event.value) {

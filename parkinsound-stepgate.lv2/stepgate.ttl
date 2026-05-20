@@ -334,6 +334,8 @@
         modgui:iconTemplate    <modgui/icon-parkinsound-stepgate.html> ;
         modgui:stylesheet      <modgui/stylesheet-parkinsound-stepgate.css> ;
         modgui:javascript      <modgui/javascript-parkinsound-stepgate.js> ;
+        modgui:screenshot      <modgui/screenshot-parkinsound-stepgate.png> ;
+        modgui:thumbnail       <modgui/thumbnail-parkinsound-stepgate.png> ;
         modgui:brand           "Parkinsound" ;
         modgui:label           "Step Gate" ;
         modgui:model           "" ;

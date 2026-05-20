@@ -35,6 +35,12 @@ install: all
 	install -m 644 $(BUNDLE)/manifest.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 644 $(BUNDLE)/stepgate.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 755 $(BUNDLE)/stepgate.so  $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
+	install -d $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui
+	install -m 644 $(BUNDLE)/modgui/icon-parkinsound-stepgate.html        $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/
+	install -m 644 $(BUNDLE)/modgui/stylesheet-parkinsound-stepgate.css   $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/
+	install -m 644 $(BUNDLE)/modgui/javascript-parkinsound-stepgate.js    $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/
+	install -m 644 $(BUNDLE)/modgui/screenshot-parkinsound-stepgate.png   $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/
+	install -m 644 $(BUNDLE)/modgui/thumbnail-parkinsound-stepgate.png    $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/
 
 # Rewrites PARKINSOUND_STEPGATE_VERSION in the mod-plugin-builder recipe
 # to point at the current git HEAD. Run AFTER committing your source
