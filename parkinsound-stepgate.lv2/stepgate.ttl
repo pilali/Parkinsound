@@ -17,6 +17,8 @@
     doap:name "Parkinsound Step Gate" ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:project <https://github.com/pilali/parkinsound> ;
+    lv2:minorVersion 1 ;
+    lv2:microVersion 0 ;
     lv2:requiredFeature urid:map ;
     lv2:optionalFeature lv2:hardRTCapable ;
 
@@ -57,8 +59,8 @@
         lv2:minimum 0 ;
         lv2:maximum 1 ;
         lv2:portProperty lv2:enumeration , lv2:integer ;
-        lv2:scalePoint [ rdfs:label "Host BPM" ; rdf:value 0 ] ;
-        lv2:scalePoint [ rdfs:label "Free"     ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "Host Sync" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "Free Run"  ; rdf:value 1 ] ;
     ] , [
         a lv2:ControlPort , lv2:InputPort ;
         lv2:index 6 ;
@@ -315,4 +317,12 @@
         lv2:name "Step 16 Tie" ;
         lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
         lv2:portProperty lv2:toggled , lv2:integer ;
+    ] , [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 41 ;
+        lv2:symbol "enabled" ;
+        lv2:name "Enabled" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+        lv2:designation lv2:enabled ;
     ] .

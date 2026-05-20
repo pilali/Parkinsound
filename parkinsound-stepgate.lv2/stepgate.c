@@ -2,9 +2,19 @@
  * Parkinsound Step Gate - 16-step audio gate sequencer (LV2)
  *
  * Pure audio plugin: each step opens or closes a smoothed gain envelope
- * over the incoming stereo audio. The step clock is driven either by the
- * host BPM (via LV2 time:Position) or by an internal tempo control when no
- * host tempo is provided.
+ * over the incoming stereo audio.
+ *
+ * Two sync modes:
+ *   - Host Sync: the step position is derived directly from time:beat
+ *     (or time:frame * bpm / sr) advertised by the host. Several
+ *     instances driven by the same host transport are therefore in
+ *     phase sample-accurately.
+ *   - Free Run: an internal phase counter, reset to step 1 each time
+ *     the lv2:enabled designation transitions from 0 to 1 (i.e. each
+ *     time the user un-bypasses the plug-in in mod-ui).
+ *
+ * When lv2:enabled is 0 the plug-in passes audio through unchanged, as
+ * required by the LV2 core spec.
  */
 
 #include <stdlib.h>
@@ -34,7 +44,8 @@ typedef enum {
     PORT_STEP_BASE    = 9
 } PortIndex;
 
-#define NUM_PORTS (PORT_STEP_BASE + NUM_STEPS * 2)
+#define PORT_ENABLED (PORT_STEP_BASE + NUM_STEPS * 2)
+#define NUM_PORTS    (PORT_ENABLED + 1)
 
 typedef struct {
     LV2_URID atom_Blank;
@@ -44,8 +55,10 @@ typedef struct {
     LV2_URID atom_Int;
     LV2_URID atom_Long;
     LV2_URID time_Position;
+    LV2_URID time_beat;
     LV2_URID time_beatsPerMinute;
     LV2_URID time_speed;
+    LV2_URID time_frame;
 } URIs;
 
 typedef struct {
@@ -63,11 +76,24 @@ typedef struct {
     float*       current_step_out;
     const float* step_on[NUM_STEPS];
     const float* step_tie[NUM_STEPS];
+    const float* enabled_port;
 
     double sample_rate;
+
+    /* Host transport state (updated from time:Position events and
+     * integrated sample-by-sample in between events). */
     double host_bpm;
-    int    current_step;
-    double phase;
+    double host_beat;
+    double host_speed;
+
+    /* Free-run state. */
+    double free_phase;
+    int    free_step;
+
+    /* lv2:enabled transition detection. */
+    int    prev_enabled;
+
+    /* Gate smoothing. */
     float  gate;
 } StepGate;
 
@@ -87,16 +113,32 @@ handle_position(StepGate* self, const LV2_Atom_Object* obj)
 {
     const URIs* uris = &self->uris;
     const LV2_Atom* bpm   = NULL;
+    const LV2_Atom* beat  = NULL;
     const LV2_Atom* speed = NULL;
+    const LV2_Atom* frame = NULL;
     lv2_atom_object_get(obj,
                         uris->time_beatsPerMinute, &bpm,
+                        uris->time_beat,           &beat,
                         uris->time_speed,          &speed,
+                        uris->time_frame,          &frame,
                         0);
     if (bpm) {
         double v = get_atom_double(bpm, uris);
         if (v > 0.0) self->host_bpm = v;
     }
-    (void)speed;
+    if (speed) {
+        self->host_speed = get_atom_double(speed, uris);
+    }
+    /* Resynchronise the local beat counter to the host's absolute
+     * position whenever we get a fresh time:Position event. time:beat is
+     * preferred since it is the most direct; fall back to deriving from
+     * time:frame and the current BPM. */
+    if (beat) {
+        self->host_beat = get_atom_double(beat, uris);
+    } else if (frame && self->host_bpm > 0.0) {
+        double f = get_atom_double(frame, uris);
+        self->host_beat = f * self->host_bpm / (60.0 * self->sample_rate);
+    }
 }
 
 static LV2_Handle
@@ -131,13 +173,21 @@ instantiate(const LV2_Descriptor* descriptor,
     u->atom_Int            = map->map(map->handle, LV2_ATOM__Int);
     u->atom_Long           = map->map(map->handle, LV2_ATOM__Long);
     u->time_Position       = map->map(map->handle, LV2_TIME__Position);
+    u->time_beat           = map->map(map->handle, LV2_TIME__beat);
     u->time_beatsPerMinute = map->map(map->handle, LV2_TIME__beatsPerMinute);
     u->time_speed          = map->map(map->handle, LV2_TIME__speed);
+    u->time_frame          = map->map(map->handle, LV2_TIME__frame);
 
     self->sample_rate  = rate;
     self->host_bpm     = 0.0;
-    self->current_step = 0;
-    self->phase        = 0.0;
+    self->host_beat    = 0.0;
+    /* Assume the host transport is running until it tells us otherwise.
+     * mod-host has no explicit play/stop and emits no time:speed=0
+     * events, so this default ensures we run freely on a MOD device. */
+    self->host_speed   = 1.0;
+    self->free_phase   = 0.0;
+    self->free_step    = 0;
+    self->prev_enabled = 1;
     self->gate         = 0.0f;
 
     return (LV2_Handle)self;
@@ -158,7 +208,9 @@ connect_port(LV2_Handle instance, uint32_t port, void* data)
         case PORT_DIVISION:     self->division         = (const float*)data; break;
         case PORT_CURRENT_STEP: self->current_step_out = (float*)data; break;
         default:
-            if (port >= PORT_STEP_BASE && port < PORT_STEP_BASE + NUM_STEPS * 2u) {
+            if (port == PORT_ENABLED) {
+                self->enabled_port = (const float*)data;
+            } else if (port >= PORT_STEP_BASE && port < PORT_STEP_BASE + NUM_STEPS * 2u) {
                 uint32_t local = port - PORT_STEP_BASE;
                 uint32_t step  = local / 2u;
                 if ((local & 1u) == 0u) self->step_on[step]  = (const float*)data;
@@ -172,8 +224,9 @@ static void
 activate(LV2_Handle instance)
 {
     StepGate* self = (StepGate*)instance;
-    self->current_step = 0;
-    self->phase        = 0.0;
+    self->free_phase   = 0.0;
+    self->free_step    = 0;
+    self->prev_enabled = 1;
     self->gate         = 0.0f;
 }
 
@@ -196,9 +249,11 @@ run(LV2_Handle instance, uint32_t n_samples)
 
     const int   sync       = self->sync_source ? (int)*self->sync_source : 0;
     const float tempo_ctrl = self->tempo       ? *self->tempo            : 120.0f;
+    const int   host_sync  = (sync == 0);
+    const int   enabled    = (!self->enabled_port) || (*self->enabled_port > 0.5f);
 
     double bpm;
-    if (sync == 0 && self->host_bpm > 0.0) {
+    if (host_sync && self->host_bpm > 0.0) {
         bpm = self->host_bpm;
     } else {
         bpm = (double)tempo_ctrl;
@@ -212,19 +267,23 @@ run(LV2_Handle instance, uint32_t n_samples)
      * 2 = 1/4 quarter     = 1 quarter
      * 3 = 1/8 eighth      = 0.5
      * 4 = 1/16 sixteenth  = 0.25
-     * 5 = 1/32            = 0.125
-     */
+     * 5 = 1/32            = 0.125 */
     static const double div_factor[6] = { 4.0, 2.0, 1.0, 0.5, 0.25, 0.125 };
-    int div = self->division ? (int)*self->division : 2;
+    int div = self->division ? (int)*self->division : 4;
     if (div < 0) div = 0;
     if (div > 5) div = 5;
+    const double step_in_beats = div_factor[div];
 
-    const double step_sec         = (60.0 / bpm) * div_factor[div];
-    double       samples_per_step = step_sec * self->sample_rate;
-    if (samples_per_step < 32.0) samples_per_step = 32.0;
-    const double phase_inc = 1.0 / samples_per_step;
+    const double beat_inc = bpm / (60.0 * self->sample_rate);
 
-    /* ~3 ms one-pole smoothing to avoid clicks on gate transitions */
+    /* Free-run only: reset to step 1 when lv2:enabled goes 0 -> 1. */
+    if (!host_sync && enabled && !self->prev_enabled) {
+        self->free_phase = 0.0;
+        self->free_step  = 0;
+    }
+    self->prev_enabled = enabled;
+
+    /* ~3 ms one-pole smoothing to avoid clicks on gate transitions. */
     const float gate_alpha = 1.0f - expf(-1.0f / (float)(0.003 * self->sample_rate));
 
     const float* inL  = self->audio_in_l;
@@ -232,18 +291,48 @@ run(LV2_Handle instance, uint32_t n_samples)
     float*       outL = self->audio_out_l;
     float*       outR = self->audio_out_r;
 
-    for (uint32_t i = 0; i < n_samples; ++i) {
-        const int step    = self->current_step;
-        const int enabled = (self->step_on[step]  && *self->step_on[step]  > 0.5f);
-        const int tie     = (self->step_tie[step] && *self->step_tie[step] > 0.5f);
+    int display_step = host_sync ? 0 : self->free_step;
 
+    for (uint32_t i = 0; i < n_samples; ++i) {
         float target;
+        int   step          = 0;
+        double in_step_phase = 0.0;
+
+        if (host_sync) {
+            /* Always advance host_beat in step with the transport, even
+             * while disabled, so that re-enabling resumes in phase. */
+            self->host_beat += self->host_speed * beat_inc;
+            const double seq_pos    = self->host_beat / step_in_beats;
+            const double seq_floor  = floor(seq_pos);
+            long step_index = (long)seq_floor;
+            in_step_phase = seq_pos - seq_floor;
+            long mod_step = step_index % NUM_STEPS;
+            if (mod_step < 0) mod_step += NUM_STEPS;
+            step = (int)mod_step;
+        } else if (enabled) {
+            step = self->free_step;
+            in_step_phase = self->free_phase;
+            self->free_phase += beat_inc / step_in_beats;
+            if (self->free_phase >= 1.0) {
+                self->free_phase -= 1.0;
+                self->free_step = (self->free_step + 1) % NUM_STEPS;
+            }
+        } else {
+            /* Free-run + disabled: freeze at step 1 ready for the next
+             * enable transition. */
+            step = 0;
+            in_step_phase = 0.0;
+        }
+
         if (!enabled) {
-            target = 0.0f;
-        } else if (tie) {
+            /* lv2:enabled = 0 -> transparent pass-through. */
             target = 1.0f;
         } else {
-            target = (self->phase < 0.5) ? 1.0f : 0.0f;
+            const int on  = (self->step_on[step]  && *self->step_on[step]  > 0.5f);
+            const int tie = (self->step_tie[step] && *self->step_tie[step] > 0.5f);
+            if (!on)         target = 0.0f;
+            else if (tie)    target = 1.0f;
+            else             target = (in_step_phase < 0.5) ? 1.0f : 0.0f;
         }
 
         self->gate += (target - self->gate) * gate_alpha;
@@ -253,15 +342,11 @@ run(LV2_Handle instance, uint32_t n_samples)
         if (outL) outL[i] = sL * self->gate;
         if (outR) outR[i] = sR * self->gate;
 
-        self->phase += phase_inc;
-        if (self->phase >= 1.0) {
-            self->phase -= 1.0;
-            self->current_step = (self->current_step + 1) % NUM_STEPS;
-        }
+        display_step = step;
     }
 
     if (self->current_step_out) {
-        *self->current_step_out = (float)(self->current_step + 1);
+        *self->current_step_out = (float)(display_step + 1);
     }
 }
 
