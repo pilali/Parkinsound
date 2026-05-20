@@ -91,6 +91,23 @@ function (event) {
 
     function wireClicks(rootEl) {
         var svg = rootEl.find('.parkinsound-stepgate-svg')[0];
+
+        /* mod-ui's drag-handler hooks mousedown on the pedal. If we
+         * don't stop the mousedown here, the drag starts and the
+         * subsequent click never fires. Stopping propagation in the
+         * bubble phase, on the SVG element itself, runs before the
+         * pedal-level listener. */
+        svg.addEventListener('mousedown', function (e) {
+            if (e.target.closest('[data-symbol]')) {
+                e.stopPropagation();
+            }
+        });
+        svg.addEventListener('touchstart', function (e) {
+            if (e.target.closest('[data-symbol]')) {
+                e.stopPropagation();
+            }
+        });
+
         svg.addEventListener('click', function (e) {
             var node = e.target.closest('[data-symbol]');
             if (!node) return;
