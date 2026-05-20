@@ -1,11 +1,12 @@
 /*
  * Parkinsound Step Gate - modgui controller.
  *
- * Builds the step ring (16 sectors, with gaps) and the tie ring (16
- * contiguous segments around it) as SVG paths, wires clicks to the
- * hidden mod-role="input-control-port" hooks declared in the HTML
- * template, and reflects host-side port changes back onto the ring
- * styling. The current_step output port lights up the active sector.
+ * The visible SVG ring is cosmetic: each step and tie path is bound
+ * to the matching hidden .mod-toggle-image widget (declared in the
+ * HTML template), and clicking a path simply $.triggers('click') on
+ * its hook. mod-ui's built-in toggle handler then writes the new
+ * value to mod-host. We listen for the 'change' callback to keep the
+ * ring's visual state in sync with the host.
  *
  * Step 1 begins just past 12 o'clock and the ring advances clockwise.
  */
@@ -14,9 +15,9 @@ function (event) {
     var CX         = 100, CY = 100;
     var STEP_OUTER = 80,  STEP_INNER = 50;
     var TIE_OUTER  = 95,  TIE_INNER  = 85;
-    var GAP_DEG    = 2;       /* gap between step sectors (degrees) */
-    var STEP_DEG   = 22.5;    /* 360 / 16 */
-    var START_DEG  = -90;     /* 12 o'clock in SVG angle convention */
+    var GAP_DEG    = 2;
+    var STEP_DEG   = 22.5;
+    var START_DEG  = -90;
 
     function deg2rad(d) { return d * Math.PI / 180; }
 
@@ -88,47 +89,21 @@ function (event) {
         }
     }
 
-    /* Push a port value back to mod-host. mod-ui versions differ in
-     * how they listen for control-port writes from custom modguis, so
-     * we try every well-known mechanism. */
-    function pushPortValue(rootEl, symbol, value, funcs) {
-        /* 1. funcs callback API (newer mod-ui versions) */
-        if (funcs) {
-            if (typeof funcs.change_port_value === 'function') {
-                funcs.change_port_value(symbol, value);
-            } else if (typeof funcs.setPortWidgetsValue === 'function') {
-                funcs.setPortWidgetsValue(symbol, value);
-            } else if (typeof funcs.set_port === 'function') {
-                funcs.set_port(symbol, value);
-            }
-        }
-        /* 2. Hidden hook input - jQuery .val().change() (classic API) */
-        var hook = rootEl.find(
-            '[mod-role="input-control-port"][mod-port-symbol="' + symbol + '"]'
-        );
-        if (hook.length) {
-            hook.val(value).trigger('change').trigger('input');
-            /* 3. Native DOM events as a last-resort backup */
-            try {
-                hook[0].value = value;
-                hook[0].dispatchEvent(new Event('change', { bubbles: true }));
-                hook[0].dispatchEvent(new Event('input',  { bubbles: true }));
-            } catch (e) { /* old browsers */ }
-        }
-    }
-
-    function wireClicks(rootEl, funcs) {
+    function wireClicks(rootEl) {
         var svg = rootEl.find('.parkinsound-stepgate-svg')[0];
         svg.addEventListener('click', function (e) {
             var node = e.target.closest('[data-symbol]');
             if (!node) return;
             var symbol = node.getAttribute('data-symbol');
-            var current = node.classList.contains('on') ? 1 : 0;
-            var next    = 1 - current;
-            /* Optimistic UI update so the click feels instant. */
-            node.classList.toggle('on',  next === 1);
-            node.classList.toggle('off', next === 0);
-            pushPortValue(rootEl, symbol, next, funcs);
+            /* Forward the click to mod-ui's standard toggle widget.
+             * That widget owns the value state and the host comms. */
+            var hook = rootEl.find(
+                '.mod-toggle-image[mod-role="input-control-port"]' +
+                '[mod-port-symbol="' + symbol + '"]'
+            );
+            if (hook.length) {
+                hook.trigger('click');
+            }
             e.stopPropagation();
             e.preventDefault();
         });
@@ -137,7 +112,7 @@ function (event) {
     if (event.type === 'start') {
         var icon = $(event.icon);
         buildRings(icon);
-        wireClicks(icon, funcs);
+        wireClicks(icon);
 
         /* Apply the snapshot of port values mod-ui gave us at start. */
         if (event.value) {

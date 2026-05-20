@@ -1,49 +1,12 @@
-<div class="parkinsound-stepgate-pedal mod-pedal" mod-role="main-body">
+<div class="parkinsound-stepgate-pedal mod-pedal{{{cns}}}">
 
-    <!-- Audio jacks: standard mod-ui hook points so pedalboards can wire
-         the plug-in. Two on each side (L+R) per MOD stereo convention. -->
-    <div class="audio-jack input  in-l"  mod-role="input-audio-port"  mod-port-symbol="audio_in_l"></div>
-    <div class="audio-jack input  in-r"  mod-role="input-audio-port"  mod-port-symbol="audio_in_r"></div>
-    <div class="audio-jack output out-l" mod-role="output-audio-port" mod-port-symbol="audio_out_l"></div>
-    <div class="audio-jack output out-r" mod-role="output-audio-port" mod-port-symbol="audio_out_r"></div>
+    <div mod-role="drag-handle" class="mod-drag-handle"></div>
 
-    <!-- Hidden control-port hooks. Direct children of main-body (not
-         wrapped in display:none, which some mod-ui versions skip during
-         their attribute scan). Mustache fills initial values. -->
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_1_on"   value="{{ports.step_1_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_1_tie"  value="{{ports.step_1_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_2_on"   value="{{ports.step_2_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_2_tie"  value="{{ports.step_2_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_3_on"   value="{{ports.step_3_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_3_tie"  value="{{ports.step_3_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_4_on"   value="{{ports.step_4_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_4_tie"  value="{{ports.step_4_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_5_on"   value="{{ports.step_5_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_5_tie"  value="{{ports.step_5_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_6_on"   value="{{ports.step_6_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_6_tie"  value="{{ports.step_6_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_7_on"   value="{{ports.step_7_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_7_tie"  value="{{ports.step_7_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_8_on"   value="{{ports.step_8_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_8_tie"  value="{{ports.step_8_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_9_on"   value="{{ports.step_9_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_9_tie"  value="{{ports.step_9_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_10_on"  value="{{ports.step_10_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_10_tie" value="{{ports.step_10_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_11_on"  value="{{ports.step_11_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_11_tie" value="{{ports.step_11_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_12_on"  value="{{ports.step_12_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_12_tie" value="{{ports.step_12_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_13_on"  value="{{ports.step_13_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_13_tie" value="{{ports.step_13_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_14_on"  value="{{ports.step_14_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_14_tie" value="{{ports.step_14_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_15_on"  value="{{ports.step_15_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_15_tie" value="{{ports.step_15_tie.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_16_on"  value="{{ports.step_16_on.value}}"/>
-    <input type="hidden" mod-role="input-control-port" mod-port-symbol="step_16_tie" value="{{ports.step_16_tie.value}}"/>
-    <input type="hidden" mod-role="output-control-port" mod-port-symbol="current_step" value="{{ports.current_step.value}}"/>
-
+    <!--
+        Visible custom UI: black square + step ring + tie ring.
+        Purely cosmetic; the SVG paths route clicks to the hidden
+        mod-toggle-image widgets below, which mod-ui drives.
+    -->
     <svg class="parkinsound-stepgate-svg"
          viewBox="0 0 200 200"
          preserveAspectRatio="xMidYMid meet"
@@ -52,5 +15,74 @@
         <g class="tie-ring"></g>
         <g class="step-ring"></g>
     </svg>
+
+    <!--
+        Hidden mod-ui toggle widgets. mod-ui's built-in JS picks up
+        every .mod-toggle-image with mod-role="input-control-port"
+        and wires its click handler straight to mod-host. The visible
+        SVG paths simply $(...).trigger('click') the matching hidden
+        widget.
+    -->
+    <div class="step-port-hooks">
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_1_on"   data-hook="step_1_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_1_tie"  data-hook="step_1_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_2_on"   data-hook="step_2_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_2_tie"  data-hook="step_2_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_3_on"   data-hook="step_3_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_3_tie"  data-hook="step_3_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_4_on"   data-hook="step_4_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_4_tie"  data-hook="step_4_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_5_on"   data-hook="step_5_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_5_tie"  data-hook="step_5_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_6_on"   data-hook="step_6_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_6_tie"  data-hook="step_6_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_7_on"   data-hook="step_7_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_7_tie"  data-hook="step_7_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_8_on"   data-hook="step_8_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_8_tie"  data-hook="step_8_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_9_on"   data-hook="step_9_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_9_tie"  data-hook="step_9_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_10_on"  data-hook="step_10_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_10_tie" data-hook="step_10_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_11_on"  data-hook="step_11_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_11_tie" data-hook="step_11_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_12_on"  data-hook="step_12_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_12_tie" data-hook="step_12_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_13_on"  data-hook="step_13_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_13_tie" data-hook="step_13_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_14_on"  data-hook="step_14_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_14_tie" data-hook="step_14_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_15_on"  data-hook="step_15_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_15_tie" data-hook="step_15_tie"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_16_on"  data-hook="step_16_on"></div>
+        <div class="mod-toggle-image" mod-role="input-control-port" mod-port-symbol="step_16_tie" data-hook="step_16_tie"></div>
+    </div>
+
+    <!--
+        Standard mod-ui audio jacks. The mustache loop is supplied by
+        mod-ui from the LV2 audio port list; mod-ui draws the side-view
+        1/4" plug graphics via the built-in .mod-pedal-input-image /
+        .mod-pedal-output-image CSS classes.
+    -->
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected"
+             title="{{name}}"
+             mod-role="input-audio-port"
+             mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected"
+             title="{{name}}"
+             mod-role="output-audio-port"
+             mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
 
 </div>
