@@ -14,8 +14,8 @@
 function (event, funcs) {
     var NS         = 'http://www.w3.org/2000/svg';
     var CX         = 100, CY = 100;
-    var STEP_OUTER = 80,  STEP_INNER = 50;
-    var TIE_OUTER  = 95,  TIE_INNER  = 85;
+    var STEP_OUTER = 67,  STEP_INNER = 42;
+    var TIE_OUTER  = 80,  TIE_INNER  = 72;
     var GAP_DEG    = 2;
     var STEP_DEG   = 22.5;
     var START_DEG  = -90;
