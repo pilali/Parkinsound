@@ -1,7 +1,28 @@
 @prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix pset: <http://lv2plug.in/ns/ext/presets#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 <https://github.com/pilali/parkinsound/lv2/stepgate>
     a lv2:Plugin ;
     lv2:binary <stepgate.so> ;
     rdfs:seeAlso <stepgate.ttl> .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/off>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:seeAlso <presets.ttl> .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/four_on_floor>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:seeAlso <presets.ttl> .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/eighth_notes>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:seeAlso <presets.ttl> .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/sixteenth_chop>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:seeAlso <presets.ttl> .

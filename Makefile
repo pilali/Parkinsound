@@ -34,6 +34,7 @@ install: all
 	install -d $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)
 	install -m 644 $(BUNDLE)/manifest.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 644 $(BUNDLE)/stepgate.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
+	install -m 644 $(BUNDLE)/presets.ttl  $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 755 $(BUNDLE)/stepgate.so  $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -d $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui
 	install -m 644 $(BUNDLE)/modgui/icon-parkinsound-stepgate.html        $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/

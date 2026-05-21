@@ -13,27 +13,16 @@
     font-family: sans-serif;
 }
 
-/* Confine mod-ui's drag-handle to a thin strip across the top so it
- * doesn't blanket the pedal with cursor:move and swallow our clicks. */
-.parkinsound-stepgate-pedal .mod-drag-handle {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 12px !important;
-    z-index: 1 !important;
-}
-
 .parkinsound-stepgate-pedal .parkinsound-stepgate-svg {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
     display: block;
-    /* Sits on top of the drag-handle so step/tie sectors are clickable
-     * over the entire ring area; the top-strip drag-handle still pokes
-     * through where the SVG content is transparent (corners). */
-    z-index: 5;
-    cursor: default;
+    /* The SVG itself is transparent to pointer events so that
+     * mod-ui's drag-handler (which sits on the pedal background)
+     * receives the mousedown on every empty area. Only the step
+     * and tie paths opt back in with pointer-events: auto below. */
+    pointer-events: none;
 }
 
 .parkinsound-stepgate-pedal .bg {
@@ -43,8 +32,8 @@
 
 /* --- Step ring (inner, thick, gapped) --- */
 .parkinsound-stepgate-pedal .step {
-    cursor: pointer !important;
     pointer-events: auto;
+    cursor: pointer !important;
     stroke: none;
     transition: fill 60ms linear, filter 60ms linear;
 }

@@ -1,0 +1,126 @@
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix pset: <http://lv2plug.in/ns/ext/presets#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+#
+# Factory presets for the Parkinsound Step Gate plug-in.
+#
+# Adding a new preset is a four-step recipe:
+#   1) Add a new `<...>/preset/<name>` block here with its label and
+#      port values.
+#   2) Reference the same URI in manifest.ttl with rdfs:seeAlso
+#      <presets.ttl>.
+#   3) Re-run `make` (no plug-in code recompile needed).
+#   4) Run `make install` so the preset TTL is shipped in the bundle.
+#
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/off>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:label "Off (silent)" ;
+    lv2:port
+        [ lv2:symbol "step_1_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_2_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_3_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_4_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_5_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_6_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_7_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_8_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_9_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_10_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_11_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_12_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_13_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_14_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_15_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_16_on"  ; pset:value 0 ] .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/four_on_floor>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:label "Four on the Floor" ;
+    lv2:port
+        [ lv2:symbol "step_1_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_2_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_3_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_4_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_5_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_6_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_7_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_8_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_9_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_10_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_11_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_12_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_13_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_14_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_15_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_16_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_1_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_5_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_9_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_13_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "division"    ; pset:value 4 ] .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/eighth_notes>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:label "Eighth Notes" ;
+    lv2:port
+        [ lv2:symbol "step_1_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_2_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_3_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_4_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_5_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_6_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_7_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_8_on"   ; pset:value 0 ] ,
+        [ lv2:symbol "step_9_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_10_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_11_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_12_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_13_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_14_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_15_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_16_on"  ; pset:value 0 ] ,
+        [ lv2:symbol "division"    ; pset:value 4 ] .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate/preset/sixteenth_chop>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:label "Sixteenth Chop" ;
+    lv2:port
+        [ lv2:symbol "step_1_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_2_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_3_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_4_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_5_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_6_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_7_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_8_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_9_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_10_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_11_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_12_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_13_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_14_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_15_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_16_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_1_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_2_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_3_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_4_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_5_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_6_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_7_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_8_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_9_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_10_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_11_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_12_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_13_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_14_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_15_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_16_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "division"    ; pset:value 4 ] .
