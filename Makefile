@@ -7,6 +7,15 @@ BUNDLE  = parkinsound-stepgate.lv2
 TARGET  = $(BUNDLE)/stepgate.so
 SOURCES = $(BUNDLE)/stepgate.c
 
+# Factory preset bundles. Add one .ttl per preset following the
+# DragonflyPlate convention (filename == preset URI). Both the file
+# and a matching <Filename.ttl> stub in manifest.ttl are required.
+PRESETS = \
+	Off.ttl \
+	Four_on_the_Floor.ttl \
+	Eighth_Notes.ttl \
+	Sixteenth_Chop.ttl
+
 CC ?= gcc
 
 # Allow mod-plugin-builder / Buildroot to inject its own flags; append ours.
@@ -34,8 +43,10 @@ install: all
 	install -d $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)
 	install -m 644 $(BUNDLE)/manifest.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 644 $(BUNDLE)/stepgate.ttl $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
-	install -m 644 $(BUNDLE)/presets.ttl  $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
 	install -m 755 $(BUNDLE)/stepgate.so  $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/
+	for p in $(PRESETS); do \
+		install -m 644 $(BUNDLE)/$$p $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/ ; \
+	done
 	install -d $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui
 	install -m 644 $(BUNDLE)/modgui/icon-parkinsound-stepgate.html        $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/
 	install -m 644 $(BUNDLE)/modgui/stylesheet-parkinsound-stepgate.css   $(DESTDIR)$(INSTALL_PATH)/$(BUNDLE)/modgui/

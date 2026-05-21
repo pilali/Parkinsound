@@ -1,0 +1,42 @@
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix pset: <http://lv2plug.in/ns/ext/presets#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<Sixteenth_Chop.ttl>
+    a pset:Preset ;
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
+    rdfs:label "Sixteenth Chop" ;
+    lv2:port
+        [ lv2:symbol "step_1_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_2_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_3_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_4_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_5_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_6_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_7_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_8_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_9_on"   ; pset:value 1 ] ,
+        [ lv2:symbol "step_10_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_11_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_12_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_13_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_14_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_15_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_16_on"  ; pset:value 1 ] ,
+        [ lv2:symbol "step_1_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_2_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_3_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_4_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_5_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_6_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_7_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_8_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_9_tie"  ; pset:value 0 ] ,
+        [ lv2:symbol "step_10_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_11_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_12_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_13_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_14_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_15_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "step_16_tie" ; pset:value 0 ] ,
+        [ lv2:symbol "division"    ; pset:value 4 ] .

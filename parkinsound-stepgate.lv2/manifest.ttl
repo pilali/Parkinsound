@@ -7,22 +7,22 @@
     lv2:binary <stepgate.so> ;
     rdfs:seeAlso <stepgate.ttl> .
 
-<https://github.com/pilali/parkinsound/lv2/stepgate/preset/off>
-    a pset:Preset ;
+<Off.ttl>
     lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
-    rdfs:seeAlso <presets.ttl> .
+    a pset:Preset ;
+    rdfs:seeAlso <Off.ttl> .
 
-<https://github.com/pilali/parkinsound/lv2/stepgate/preset/four_on_floor>
-    a pset:Preset ;
+<Four_on_the_Floor.ttl>
     lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
-    rdfs:seeAlso <presets.ttl> .
+    a pset:Preset ;
+    rdfs:seeAlso <Four_on_the_Floor.ttl> .
 
-<https://github.com/pilali/parkinsound/lv2/stepgate/preset/eighth_notes>
-    a pset:Preset ;
+<Eighth_Notes.ttl>
     lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
-    rdfs:seeAlso <presets.ttl> .
+    a pset:Preset ;
+    rdfs:seeAlso <Eighth_Notes.ttl> .
 
-<https://github.com/pilali/parkinsound/lv2/stepgate/preset/sixteenth_chop>
-    a pset:Preset ;
+<Sixteenth_Chop.ttl>
     lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate> ;
-    rdfs:seeAlso <presets.ttl> .
+    a pset:Preset ;
+    rdfs:seeAlso <Sixteenth_Chop.ttl> .
