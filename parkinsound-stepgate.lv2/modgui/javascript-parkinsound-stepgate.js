@@ -41,13 +41,42 @@ function (event, funcs) {
                 'Z'].join(' ');
     }
 
-    function buildRings(rootEl) {
+    function buildRings(rootEl, funcs) {
         var svg = rootEl.find('.parkinsound-stepgate-svg')[0];
         if (!svg || svg.getAttribute('data-built') === 'true') return;
         svg.setAttribute('data-built', 'true');
 
         var tieGroup  = svg.querySelector('.tie-ring');
         var stepGroup = svg.querySelector('.step-ring');
+
+        /* The SVG container is pointer-events:none so mod-ui's
+         * drag-handler sees mousedowns on the empty background. Click
+         * and mousedown listeners attach DIRECTLY on each path
+         * (pointer-events:auto in CSS), because bubbling through a
+         * pointer-events:none parent isn't reliable across browsers. */
+        function onPathMousedown(e) {
+            e.stopPropagation();
+        }
+        function onPathClick(e) {
+            var symbol  = this.getAttribute('data-symbol');
+            var current = this.classList.contains('on') ? 1 : 0;
+            var next    = 1 - current;
+            if (funcs && typeof funcs.set_port_value === 'function') {
+                funcs.set_port_value(symbol, next);
+            }
+            /* Optimistic visual; round-trips through mod-host as a
+             * 'change' event that will reconfirm or correct it. */
+            this.classList.toggle('on',  next === 1);
+            this.classList.toggle('off', next === 0);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        function attachHandlers(node) {
+            node.addEventListener('mousedown',  onPathMousedown);
+            node.addEventListener('touchstart', onPathMousedown);
+            node.addEventListener('click',      onPathClick);
+        }
 
         for (var i = 0; i < 16; i++) {
             var n         = i + 1;
@@ -62,6 +91,7 @@ function (event, funcs) {
             tie.setAttribute('data-step',   n);
             tie.setAttribute('data-symbol', 'step_' + n + '_tie');
             tieGroup.appendChild(tie);
+            attachHandlers(tie);
 
             var step = document.createElementNS(NS, 'path');
             step.setAttribute('d',     ringPath(STEP_OUTER, STEP_INNER, stepStart, stepEnd));
@@ -69,6 +99,7 @@ function (event, funcs) {
             step.setAttribute('data-step',   n);
             step.setAttribute('data-symbol', 'step_' + n + '_on');
             stepGroup.appendChild(step);
+            attachHandlers(step);
         }
     }
 
@@ -90,48 +121,9 @@ function (event, funcs) {
         }
     }
 
-    function wireClicks(rootEl) {
-        var svg = rootEl.find('.parkinsound-stepgate-svg')[0];
-
-        /* mod-ui's drag-handler hooks mousedown on the pedal. If we
-         * don't stop the mousedown here, the drag starts and the
-         * subsequent click never fires. */
-        svg.addEventListener('mousedown', function (e) {
-            if (e.target.closest('[data-symbol]')) {
-                e.stopPropagation();
-            }
-        });
-        svg.addEventListener('touchstart', function (e) {
-            if (e.target.closest('[data-symbol]')) {
-                e.stopPropagation();
-            }
-        });
-
-        svg.addEventListener('click', function (e) {
-            var node = e.target.closest('[data-symbol]');
-            if (!node) return;
-            var symbol = node.getAttribute('data-symbol');
-            var current = node.classList.contains('on') ? 1 : 0;
-            var next    = 1 - current;
-            /* Push to mod-host via the canonical modgui callback.
-             * mod-ui wraps this as setPortValue(..., "from-js"),
-             * which is exempt from the addressing-blocked check. */
-            if (funcs && typeof funcs.set_port_value === 'function') {
-                funcs.set_port_value(symbol, next);
-            }
-            /* Optimistic visual update; the real value will round-trip
-             * through mod-host and arrive as a 'change' event shortly. */
-            node.classList.toggle('on',  next === 1);
-            node.classList.toggle('off', next === 0);
-            e.stopPropagation();
-            e.preventDefault();
-        });
-    }
-
     if (event.type === 'start') {
         var icon = $(event.icon);
-        buildRings(icon);
-        wireClicks(icon);
+        buildRings(icon, funcs);
 
         /* Apply the snapshot of port values mod-ui gave us at start. */
         if (event.value) {
