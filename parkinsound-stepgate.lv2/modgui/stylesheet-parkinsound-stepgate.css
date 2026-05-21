@@ -1,8 +1,15 @@
 /* Parkinsound Step Gate modgui styles
  *
- * Layout intentionally kept square (matches the user's "carré noir"
- * design brief). The pedal area is sized by mod-ui via mod-pedal-*
- * classes; the SVG ring fills it. */
+ * Layout:
+ *   - Pedal is 200x200 black.
+ *   - The only drag-handles are four 30x30 squares in the corners,
+ *     where the ring outer radius (r=95 from centre at 100,100)
+ *     doesn't reach. Distance from a corner of the 30x30 to the
+ *     centre is sqrt(70^2 + 70^2) = 99, so the corner squares fall
+ *     entirely outside the ring.
+ *   - Step ring (r in [50,80]) and tie ring (r in [85,95]) are
+ *     interactive everywhere they are painted.
+ */
 
 .parkinsound-stepgate-pedal {
     position: relative;
@@ -13,16 +20,27 @@
     font-family: sans-serif;
 }
 
+/* --- Drag zones --- */
+.parkinsound-stepgate-pedal .drag-zone {
+    position: absolute;
+    background: transparent;
+    cursor: move;
+    z-index: 10;
+    width: 30px;
+    height: 30px;
+}
+.parkinsound-stepgate-pedal .drag-zone.drag-tl { top: 0;    left: 0;  }
+.parkinsound-stepgate-pedal .drag-zone.drag-tr { top: 0;    right: 0; }
+.parkinsound-stepgate-pedal .drag-zone.drag-bl { bottom: 0; left: 0;  }
+.parkinsound-stepgate-pedal .drag-zone.drag-br { bottom: 0; right: 0; }
+
+/* --- SVG canvas --- */
 .parkinsound-stepgate-pedal .parkinsound-stepgate-svg {
     position: absolute;
     top: 0; left: 0;
-    width: 100%; height: 100%;
+    width: 100%;
+    height: 100%;
     display: block;
-    /* The SVG itself is transparent to pointer events so that
-     * mod-ui's drag-handler (which sits on the pedal background)
-     * receives the mousedown on every empty area. Only the step
-     * and tie paths opt back in with pointer-events: auto below. */
-    pointer-events: none;
 }
 
 .parkinsound-stepgate-pedal .bg {
@@ -33,13 +51,11 @@
 /* --- Step ring (inner, thick, gapped) --- */
 .parkinsound-stepgate-pedal .step {
     pointer-events: auto;
-    cursor: pointer !important;
+    cursor: pointer;
     stroke: none;
     transition: fill 60ms linear, filter 60ms linear;
 }
-.parkinsound-stepgate-pedal .step.off {
-    fill: #4a4a4a;
-}
+.parkinsound-stepgate-pedal .step.off { fill: #4a4a4a; }
 .parkinsound-stepgate-pedal .step.on {
     fill: #ffffff;
     filter: drop-shadow(0 0 4px #ffffff)
@@ -48,23 +64,20 @@
 
 /* --- Tie ring (outer, thin, continuous) --- */
 .parkinsound-stepgate-pedal .tie {
-    cursor: pointer !important;
     pointer-events: auto;
+    cursor: pointer;
     stroke: none;
     transition: fill 60ms linear, filter 60ms linear;
 }
-.parkinsound-stepgate-pedal .tie.off {
-    fill: #3a3a3a;
-}
+.parkinsound-stepgate-pedal .tie.off { fill: #3a3a3a; }
 .parkinsound-stepgate-pedal .tie.on {
     fill: #ffffff;
     filter: drop-shadow(0 0 3px #ffffff)
             drop-shadow(0 0 6px rgba(255,255,255,0.55));
 }
 
-/* Pulse the currently-playing step. The JS adds a .playing class. */
+/* Pulse the currently-playing step. */
 .parkinsound-stepgate-pedal .step.playing {
     filter: drop-shadow(0 0 6px #ffffff)
             drop-shadow(0 0 14px rgba(255,255,255,0.85));
 }
-

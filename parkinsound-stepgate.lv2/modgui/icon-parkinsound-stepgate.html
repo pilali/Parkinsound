@@ -1,12 +1,14 @@
 <div class="parkinsound-stepgate-pedal mod-pedal{{{cns}}}">
 
-    <div mod-role="drag-handle" class="mod-drag-handle"></div>
+    <!-- Four explicit drag zones, one in each corner where the ring
+         doesn't reach. Anywhere outside these the pedal stays put,
+         so the entire step/tie ring is freely clickable. -->
+    <div mod-role="drag-handle" class="mod-drag-handle drag-zone drag-tl"></div>
+    <div mod-role="drag-handle" class="mod-drag-handle drag-zone drag-tr"></div>
+    <div mod-role="drag-handle" class="mod-drag-handle drag-zone drag-bl"></div>
+    <div mod-role="drag-handle" class="mod-drag-handle drag-zone drag-br"></div>
 
-    <!--
-        Visible custom UI: black square + step ring + tie ring.
-        The SVG paths are clickable; the modgui JS pushes value
-        changes via funcs.set_port_value(), no hidden hooks needed.
-    -->
+    <!-- Visible custom UI: black square + step ring + tie ring. -->
     <svg class="parkinsound-stepgate-svg"
          viewBox="0 0 200 200"
          preserveAspectRatio="xMidYMid meet"
