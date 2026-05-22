@@ -1,40 +1,37 @@
 /* Parkinsound Step Gate modgui styles
  *
- * Layout:
- *   - Pedal is 200x200 black.
- *   - The only drag-handles are four 30x30 squares in the corners,
- *     where the ring outer radius (r=95 from centre at 100,100)
- *     doesn't reach. Distance from a corner of the 30x30 to the
- *     centre is sqrt(70^2 + 70^2) = 99, so the corner squares fall
- *     entirely outside the ring.
- *   - Step ring (r in [50,80]) and tie ring (r in [85,95]) are
- *     interactive everywhere they are painted.
+ * Pedal: 250x250 black square, ring centred at (125,125), original
+ * radii (tie 95/85, step 80/50) - the 250 size leaves a uniform 30px
+ * margin between the ring outer and the pedal edges.
+ *
+ * Drag: only four 50x50 corner squares; everywhere else clicks land
+ * on the SVG paths and quarter buttons.
  */
 
 .parkinsound-stepgate-pedal {
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: 250px;
+    height: 250px;
     background: #000;
     color: #fff;
     font-family: sans-serif;
 }
 
-/* --- Drag zones --- */
+/* --- Drag zones in the four corners --- */
 .parkinsound-stepgate-pedal .drag-zone {
     position: absolute;
     background: transparent;
     cursor: move;
     z-index: 10;
-    width: 30px;
-    height: 30px;
+    width: 50px;
+    height: 50px;
 }
 .parkinsound-stepgate-pedal .drag-zone.drag-tl { top: 0;    left: 0;  }
 .parkinsound-stepgate-pedal .drag-zone.drag-tr { top: 0;    right: 0; }
 .parkinsound-stepgate-pedal .drag-zone.drag-bl { bottom: 0; left: 0;  }
 .parkinsound-stepgate-pedal .drag-zone.drag-br { bottom: 0; right: 0; }
 
-/* --- SVG canvas --- */
+/* --- SVG canvas filling the pedal --- */
 .parkinsound-stepgate-pedal .parkinsound-stepgate-svg {
     position: absolute;
     top: 0; left: 0;
@@ -80,4 +77,44 @@
 .parkinsound-stepgate-pedal .step.playing {
     filter: drop-shadow(0 0 6px #ffffff)
             drop-shadow(0 0 14px rgba(255,255,255,0.85));
+}
+
+/* --- Centre quarters (4 buttons in the middle) --- */
+.parkinsound-stepgate-pedal .quarter {
+    pointer-events: auto;
+    cursor: pointer;
+    fill: #1a1a1a;
+    stroke: #000;
+    stroke-width: 1.5;
+    transition: fill 80ms linear, filter 80ms linear;
+}
+.parkinsound-stepgate-pedal .quarter:hover {
+    fill: #2a2a2a;
+}
+.parkinsound-stepgate-pedal .quarter.on {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 3px #ffffff)
+            drop-shadow(0 0 6px rgba(255,255,255,0.55));
+}
+.parkinsound-stepgate-pedal .quarter.free {
+    fill: #cfcfcf;
+}
+
+/* Labels inside each quarter */
+.parkinsound-stepgate-pedal .centre-label {
+    fill: #bbb;
+    font-size: 11px;
+    font-family: sans-serif;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate-pedal .centre-label.label-tl.on {
+    fill: #000;  /* on-state quarter is white, so dot becomes black */
+}
+.parkinsound-stepgate-pedal .centre-label.label-bl,
+.parkinsound-stepgate-pedal .centre-label.label-br {
+    font-size: 16px;
+    font-weight: bold;
 }

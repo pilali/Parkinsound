@@ -1,7 +1,7 @@
 <!--
-  Standalone preview of the modgui icon. Open this in any browser to
-  iterate on the visual design without needing mod-ui. It does NOT talk
-  to a host; clicks just toggle local CSS classes.
+  Standalone preview of the modgui icon. Open in any browser to iterate
+  on the visual design without needing mod-ui. Clicks just toggle local
+  CSS classes; no actual host communication.
 -->
 <!doctype html>
 <html lang="en">
@@ -13,38 +13,44 @@
     body { background: #1a1a1a; color: #ccc; font-family: sans-serif; padding: 20px; }
     .stage { display: inline-block; padding: 10px; background: #000; border-radius: 6px; }
     h1 { font-weight: 300; font-size: 18px; }
-    .hint { font-size: 12px; color: #888; margin-top: 8px; }
+    .hint { font-size: 12px; color: #888; margin-top: 8px; max-width: 600px; line-height: 1.5; }
 </style>
 </head>
 <body>
 <h1>Parkinsound Step Gate &mdash; modgui preview</h1>
 <div class="stage">
     <div class="parkinsound-stepgate-pedal">
-        <svg class="parkinsound-stepgate-svg" viewBox="0 0 200 200"
+        <svg class="parkinsound-stepgate-svg" viewBox="0 0 250 250"
              preserveAspectRatio="xMidYMid meet"
              xmlns="http://www.w3.org/2000/svg">
-            <rect class="bg" x="0" y="0" width="200" height="200"></rect>
+            <rect class="bg" x="0" y="0" width="250" height="250"></rect>
             <g class="tie-ring"></g>
             <g class="step-ring"></g>
+            <g class="centre-quarters"></g>
+            <g class="centre-labels"></g>
         </svg>
     </div>
 </div>
-<div class="hint">In mod-ui, the side-view 1/4&quot; jack plugs are drawn automatically by mod-ui via its built-in .mod-pedal-input-image / .mod-pedal-output-image classes and the {{#effect.ports.audio.input}} mustache loop. They&#39;re not shown here because this preview runs without mod-ui.</div>
-<div class="hint">Click on a step sector (inner ring) to toggle on/off. Click on a tie segment (outer ring) to toggle the tie.</div>
+<div class="hint">
+    Inner ring = steps, outer ring = ties. Four centre quarters: top-left enable,
+    top-right sync (H/F), bottom-left preset prev, bottom-right preset next.
+    The side-view 1/4&quot; audio jacks are drawn by mod-ui at runtime via the
+    .mod-pedal-input / .mod-pedal-output containers, so they don&#39;t show here.
+</div>
 
 <script>
-/* Inline the same path-building math as the real modgui script so
- * this preview stays in sync without needing the LV2 host machinery. */
 (function () {
     var NS = 'http://www.w3.org/2000/svg';
-    var CX = 100, CY = 100;
-    var STEP_OUTER = 67, STEP_INNER = 42;
-    var TIE_OUTER  = 80, TIE_INNER  = 72;
+    var CX = 125, CY = 125;
+    var STEP_OUTER = 80, STEP_INNER = 50;
+    var TIE_OUTER  = 95, TIE_INNER  = 85;
+    var QTR_RADIUS = 45;
     var GAP_DEG    = 2;
     var STEP_DEG   = 22.5;
     var START_DEG  = -90;
 
     function deg2rad(d) { return d * Math.PI / 180; }
+
     function ringPath(rO, rI, s, e) {
         var a0 = deg2rad(s), a1 = deg2rad(e);
         var ox0 = (CX + rO*Math.cos(a0)).toFixed(3);
@@ -59,40 +65,68 @@
         return ['M',ox0,oy0,'A',rO,rO,0,large,1,ox1,oy1,
                 'L',ix1,iy1,'A',rI,rI,0,large,0,ix0,iy0,'Z'].join(' ');
     }
+    function piePath(r, s, e) {
+        var a0 = deg2rad(s), a1 = deg2rad(e);
+        var x0 = (CX + r*Math.cos(a0)).toFixed(3);
+        var y0 = (CY + r*Math.sin(a0)).toFixed(3);
+        var x1 = (CX + r*Math.cos(a1)).toFixed(3);
+        var y1 = (CY + r*Math.sin(a1)).toFixed(3);
+        var large = (e - s) > 180 ? 1 : 0;
+        return ['M',CX,CY,'L',x0,y0,'A',r,r,0,large,1,x1,y1,'Z'].join(' ');
+    }
+    function mkText(x, y, t, cls) {
+        var node = document.createElementNS(NS,'text');
+        node.setAttribute('x',x); node.setAttribute('y',y);
+        node.setAttribute('class', cls);
+        node.textContent = t;
+        return node;
+    }
 
     var tieRing  = document.querySelector('.tie-ring');
     var stepRing = document.querySelector('.step-ring');
     for (var i = 0; i < 16; i++) {
-        var n = i + 1;
-        var ts = START_DEG + i*STEP_DEG;
-        var te = ts + STEP_DEG;
-        var ss = ts + GAP_DEG/2;
-        var se = te - GAP_DEG/2;
-
-        /* Visualisation defaults: step 1 ON, all ties ON (matches the
-         * lv2:default values in stepgate.ttl). */
-        var stepClass = (n === 1) ? 'step on' : 'step off';
-
-        var tie = document.createElementNS(NS, 'path');
+        var n  = i + 1;
+        var ts = START_DEG + i*STEP_DEG, te = ts + STEP_DEG;
+        var ss = ts + GAP_DEG/2,        se = te - GAP_DEG/2;
+        var tie = document.createElementNS(NS,'path');
         tie.setAttribute('d', ringPath(TIE_OUTER, TIE_INNER, ts, te));
         tie.setAttribute('class', 'tie on');
-        tie.setAttribute('data-step', n);
-        tie.setAttribute('data-symbol', 'step_'+n+'_tie');
+        tie.setAttribute('data-symbol','step_'+n+'_tie');
         tieRing.appendChild(tie);
-
-        var step = document.createElementNS(NS, 'path');
+        var step = document.createElementNS(NS,'path');
         step.setAttribute('d', ringPath(STEP_OUTER, STEP_INNER, ss, se));
-        step.setAttribute('class', stepClass);
-        step.setAttribute('data-step', n);
-        step.setAttribute('data-symbol', 'step_'+n+'_on');
+        step.setAttribute('class', n === 1 ? 'step on' : 'step off');
+        step.setAttribute('data-symbol','step_'+n+'_on');
         stepRing.appendChild(step);
     }
 
-    document.querySelector('.parkinsound-stepgate-svg').addEventListener('click', function (ev) {
-        var node = ev.target.closest('[data-symbol]');
-        if (!node) return;
-        node.classList.toggle('on');
-        node.classList.toggle('off');
+    var qGroup   = document.querySelector('.centre-quarters');
+    var lblGroup = document.querySelector('.centre-labels');
+    var Q = [
+        {cls:'q-tl on', action:'enable',      s:180, e:270, lcls:'label-tl on', txt:'●'},
+        {cls:'q-tr',    action:'sync',        s:270, e:360, lcls:'label-tr',    txt:'H'},
+        {cls:'q-bl',    action:'preset-prev', s:90,  e:180, lcls:'label-bl',    txt:'‹'},
+        {cls:'q-br',    action:'preset-next', s:0,   e:90,  lcls:'label-br',    txt:'›'}
+    ];
+    Q.forEach(function(q){
+        var p = document.createElementNS(NS,'path');
+        p.setAttribute('d', piePath(QTR_RADIUS, q.s, q.e));
+        p.setAttribute('class', 'quarter ' + q.cls);
+        p.setAttribute('data-action', q.action);
+        qGroup.appendChild(p);
+        var mid = (q.s + q.e)/2;
+        var mr  = QTR_RADIUS * 0.55;
+        var lx  = CX + mr * Math.cos(deg2rad(mid));
+        var ly  = CY + mr * Math.sin(deg2rad(mid));
+        lblGroup.appendChild(mkText(lx, ly, q.txt, 'centre-label ' + q.lcls));
+    });
+
+    /* Toggle classes for preview only - no host comms */
+    document.querySelector('.parkinsound-stepgate-svg').addEventListener('click', function(ev) {
+        var t = ev.target.closest('[data-symbol]') || ev.target.closest('[data-action]');
+        if (!t) return;
+        t.classList.toggle('on');
+        t.classList.toggle('off');
     });
 })();
 </script>
