@@ -299,9 +299,14 @@ run(LV2_Handle instance, uint32_t n_samples)
         double in_step_phase = 0.0;
 
         if (host_sync) {
-            /* Always advance host_beat in step with the transport, even
-             * while disabled, so that re-enabling resumes in phase. */
-            self->host_beat += self->host_speed * beat_inc;
+            /* Always advance the beat counter while the plug-in is
+             * being clocked. mod-host has no JACK transport on a MOD
+             * device and emits time:Position with time:speed = 0,
+             * which would otherwise freeze the sequencer at step 1.
+             * In a DAW this means the pattern keeps cycling while
+             * the transport is paused, which is the right behaviour
+             * for a tremolo-style step gate. */
+            self->host_beat += beat_inc;
             const double seq_pos    = self->host_beat / step_in_beats;
             const double seq_floor  = floor(seq_pos);
             long step_index = (long)seq_floor;

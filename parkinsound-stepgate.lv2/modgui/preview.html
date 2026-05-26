@@ -26,7 +26,7 @@
             <rect class="bg" x="0" y="0" width="250" height="250"></rect>
             <g class="tie-ring"></g>
             <g class="step-ring"></g>
-            <g class="centre-quarters"></g>
+            <g class="centre-halves"></g>
             <g class="centre-labels"></g>
         </svg>
     </div>
@@ -44,7 +44,7 @@
     var CX = 125, CY = 125;
     var STEP_OUTER = 80, STEP_INNER = 50;
     var TIE_OUTER  = 95, TIE_INNER  = 85;
-    var QTR_RADIUS = 45;
+    var HALF_R     = 45;
     var GAP_DEG    = 2;
     var STEP_DEG   = 22.5;
     var START_DEG  = -90;
@@ -65,14 +65,11 @@
         return ['M',ox0,oy0,'A',rO,rO,0,large,1,ox1,oy1,
                 'L',ix1,iy1,'A',rI,rI,0,large,0,ix0,iy0,'Z'].join(' ');
     }
-    function piePath(r, s, e) {
-        var a0 = deg2rad(s), a1 = deg2rad(e);
-        var x0 = (CX + r*Math.cos(a0)).toFixed(3);
-        var y0 = (CY + r*Math.sin(a0)).toFixed(3);
-        var x1 = (CX + r*Math.cos(a1)).toFixed(3);
-        var y1 = (CY + r*Math.sin(a1)).toFixed(3);
-        var large = (e - s) > 180 ? 1 : 0;
-        return ['M',CX,CY,'L',x0,y0,'A',r,r,0,large,1,x1,y1,'Z'].join(' ');
+    function halfPath(r, isTop) {
+        var sweep = isTop ? 1 : 0;
+        return ['M', (CX-r).toFixed(3), CY,
+                'A', r, r, 0, 0, sweep, (CX+r).toFixed(3), CY,
+                'Z'].join(' ');
     }
     function mkText(x, y, t, cls) {
         var node = document.createElementNS(NS,'text');
@@ -100,26 +97,25 @@
         stepRing.appendChild(step);
     }
 
-    var qGroup   = document.querySelector('.centre-quarters');
+    var hGroup   = document.querySelector('.centre-halves');
     var lblGroup = document.querySelector('.centre-labels');
-    var Q = [
-        {cls:'q-tl on', action:'enable',      s:180, e:270, lcls:'label-tl on', txt:'●'},
-        {cls:'q-tr',    action:'sync',        s:270, e:360, lcls:'label-tr',    txt:'H'},
-        {cls:'q-bl',    action:'preset-prev', s:90,  e:180, lcls:'label-bl',    txt:'‹'},
-        {cls:'q-br',    action:'preset-next', s:0,   e:90,  lcls:'label-br',    txt:'›'}
-    ];
-    Q.forEach(function(q){
-        var p = document.createElementNS(NS,'path');
-        p.setAttribute('d', piePath(QTR_RADIUS, q.s, q.e));
-        p.setAttribute('class', 'quarter ' + q.cls);
-        p.setAttribute('data-action', q.action);
-        qGroup.appendChild(p);
-        var mid = (q.s + q.e)/2;
-        var mr  = QTR_RADIUS * 0.55;
-        var lx  = CX + mr * Math.cos(deg2rad(mid));
-        var ly  = CY + mr * Math.sin(deg2rad(mid));
-        lblGroup.appendChild(mkText(lx, ly, q.txt, 'centre-label ' + q.lcls));
-    });
+
+    var topHalf = document.createElementNS(NS,'path');
+    topHalf.setAttribute('d', halfPath(HALF_R, true));
+    topHalf.setAttribute('class', 'centre-half top on');
+    topHalf.setAttribute('data-action','enable');
+    hGroup.appendChild(topHalf);
+
+    var bottomHalf = document.createElementNS(NS,'path');
+    bottomHalf.setAttribute('d', halfPath(HALF_R, false));
+    bottomHalf.setAttribute('class', 'centre-half bottom');
+    bottomHalf.setAttribute('data-action','sync');
+    hGroup.appendChild(bottomHalf);
+
+    lblGroup.appendChild(mkText(CX, CY - HALF_R*0.45, 'ON',
+                                'centre-label label-top on'));
+    lblGroup.appendChild(mkText(CX, CY + HALF_R*0.45, 'HOST',
+                                'centre-label label-bottom'));
 
     /* Toggle classes for preview only - no host comms */
     document.querySelector('.parkinsound-stepgate-svg').addEventListener('click', function(ev) {

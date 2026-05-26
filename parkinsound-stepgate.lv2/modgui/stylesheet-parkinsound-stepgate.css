@@ -79,8 +79,8 @@
             drop-shadow(0 0 14px rgba(255,255,255,0.85));
 }
 
-/* --- Centre quarters (4 buttons in the middle) --- */
-.parkinsound-stepgate-pedal .quarter {
+/* --- Centre halves (2 buttons in the middle) --- */
+.parkinsound-stepgate-pedal .centre-half {
     pointer-events: auto;
     cursor: pointer;
     fill: #1a1a1a;
@@ -88,33 +88,31 @@
     stroke-width: 1.5;
     transition: fill 80ms linear, filter 80ms linear;
 }
-.parkinsound-stepgate-pedal .quarter:hover {
+.parkinsound-stepgate-pedal .centre-half:hover {
     fill: #2a2a2a;
 }
-.parkinsound-stepgate-pedal .quarter.on {
+.parkinsound-stepgate-pedal .centre-half.top.on {
     fill: #ffffff;
     filter: drop-shadow(0 0 3px #ffffff)
             drop-shadow(0 0 6px rgba(255,255,255,0.55));
 }
-.parkinsound-stepgate-pedal .quarter.free {
-    fill: #cfcfcf;
+.parkinsound-stepgate-pedal .centre-half.bottom.free {
+    fill: #2a2a2a;
 }
 
-/* Labels inside each quarter */
+/* Labels inside each half */
 .parkinsound-stepgate-pedal .centre-label {
     fill: #bbb;
     font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
     font-family: sans-serif;
     text-anchor: middle;
     dominant-baseline: middle;
     pointer-events: none;
     user-select: none;
 }
-.parkinsound-stepgate-pedal .centre-label.label-tl.on {
-    fill: #000;  /* on-state quarter is white, so dot becomes black */
-}
-.parkinsound-stepgate-pedal .centre-label.label-bl,
-.parkinsound-stepgate-pedal .centre-label.label-br {
-    font-size: 16px;
-    font-weight: bold;
+/* Top label flips colour when the top half is lit (white background) */
+.parkinsound-stepgate-pedal .centre-label.label-top.on {
+    fill: #000;
 }

@@ -2,26 +2,22 @@
  * Parkinsound Step Gate - modgui controller.
  *
  * Layout (250x250 viewBox, centre 125,125):
- *   - Tie ring    : annulus r in [85, 95]   (16 segments, no gap)
- *   - Step ring   : annulus r in [50, 80]   (16 segments, 2deg gap)
- *   - Quarter pies: r in [0, 45]            (4 buttons in centre)
+ *   - Tie ring  : annulus r in [85, 95]   (16 segments, no gap)
+ *   - Step ring : annulus r in [50, 80]   (16 segments, 2deg gap)
+ *   - Two centre halves: r in [0, 45]
+ *       TOP    : toggles lv2:enabled (disable / enable)
+ *       BOTTOM : toggles sync_source (HOST / FREE)
  *
- * Centre quarter buttons:
- *   TL (180-270)  : toggles the lv2:enabled port
- *   TR (270-360)  : toggles sync_source (Host Sync <-> Free Run)
- *   BL (90-180)   : preset prev   (TODO: no documented modgui API yet)
- *   BR (0-90)     : preset next   (TODO)
- *
- * Each path attaches its own click / mousedown / touchstart so we
- * never depend on bubbling through SVG containers that may have
- * pointer-events:none.
+ * Each interactive element attaches its own click / mousedown /
+ * touchstart so we never depend on bubbling through SVG containers
+ * that may have pointer-events:none.
  */
 function (event, funcs) {
     var NS         = 'http://www.w3.org/2000/svg';
     var CX         = 125, CY = 125;
     var STEP_OUTER = 80,  STEP_INNER = 50;
     var TIE_OUTER  = 95,  TIE_INNER  = 85;
-    var QTR_RADIUS = 45;
+    var HALF_R     = 45;
     var GAP_DEG    = 2;
     var STEP_DEG   = 22.5;
     var START_DEG  = -90;
@@ -47,17 +43,13 @@ function (event, funcs) {
                 'Z'].join(' ');
     }
 
-    function piePath(r, startDeg, endDeg) {
-        var a0 = deg2rad(startDeg);
-        var a1 = deg2rad(endDeg);
-        var x0 = (CX + r * Math.cos(a0)).toFixed(3);
-        var y0 = (CY + r * Math.sin(a0)).toFixed(3);
-        var x1 = (CX + r * Math.cos(a1)).toFixed(3);
-        var y1 = (CY + r * Math.sin(a1)).toFixed(3);
-        var large = (endDeg - startDeg) > 180 ? 1 : 0;
-        return ['M', CX, CY,
-                'L', x0, y0,
-                'A', r, r, 0, large, 1, x1, y1,
+    /* Top half-disc: arc goes from (CX-R, CY) CW through 270 (top) to
+     * (CX+R, CY), then Z closes back along the diameter.
+     * Bottom half-disc: arc goes CCW through 90 (bottom) instead. */
+    function halfPath(r, isTop) {
+        var sweep = isTop ? 1 : 0;
+        return ['M', (CX - r).toFixed(3), CY,
+                'A', r, r, 0, 0, sweep, (CX + r).toFixed(3), CY,
                 'Z'].join(' ');
     }
 
@@ -89,7 +81,7 @@ function (event, funcs) {
         e.preventDefault();
     }
 
-    function onQuarterClick(e) {
+    function onHalfClick(e) {
         var action = this.getAttribute('data-action');
         var icon   = this.closest('.parkinsound-stepgate-pedal');
 
@@ -106,11 +98,6 @@ function (event, funcs) {
                 funcs.set_port_value('sync_source', freeRun ? 1 : 0);
             }
             applySync(icon, freeRun);
-        } else if (action === 'preset-prev' || action === 'preset-next') {
-            /* TODO: mod-ui's jsFuncs (set_port_value, patch_set) does
-             * not expose a documented way to navigate presets from a
-             * custom modgui. Leaving the visual + click in place; the
-             * wiring will land once we identify the right hook. */
         }
 
         e.stopPropagation();
@@ -118,17 +105,20 @@ function (event, funcs) {
     }
 
     function applyEnabled(iconEl, on) {
-        var q = iconEl.querySelector('.quarter.q-tl');
-        var dot = iconEl.querySelector('.label-tl');
-        if (q)   q.classList.toggle('on', on);
-        if (dot) dot.classList.toggle('on', on);
+        var half = iconEl.querySelector('.centre-half.top');
+        var lbl  = iconEl.querySelector('.centre-label.label-top');
+        if (half) half.classList.toggle('on', on);
+        if (lbl)  {
+            lbl.classList.toggle('on', on);
+            lbl.textContent = on ? 'ON' : 'OFF';
+        }
     }
 
     function applySync(iconEl, freeRun) {
-        var q = iconEl.querySelector('.quarter.q-tr');
-        var lbl = iconEl.querySelector('.label-tr');
-        if (q) q.classList.toggle('free', freeRun);
-        if (lbl) lbl.textContent = freeRun ? 'F' : 'H';
+        var half = iconEl.querySelector('.centre-half.bottom');
+        var lbl  = iconEl.querySelector('.centre-label.label-bottom');
+        if (half) half.classList.toggle('free', freeRun);
+        if (lbl)  lbl.textContent = freeRun ? 'FREE' : 'HOST';
     }
 
     function applyStepValue(iconEl, symbol, value) {
@@ -159,10 +149,10 @@ function (event, funcs) {
         node.addEventListener('click',      onStepOrTieClick);
     }
 
-    function attachQuarterHandlers(node) {
+    function attachHalfHandlers(node) {
         node.addEventListener('mousedown',  stopMouseDown);
         node.addEventListener('touchstart', stopMouseDown);
-        node.addEventListener('click',      onQuarterClick);
+        node.addEventListener('click',      onHalfClick);
     }
 
     function buildRings(rootEl) {
@@ -198,38 +188,33 @@ function (event, funcs) {
             attachStepHandlers(step);
         }
 
-        /* --- 4 centre quarter buttons --- */
-        var qGroup   = svg.querySelector('.centre-quarters');
-        var lblGroup = svg.querySelector('.centre-labels');
+        /* --- 2 centre halves --- */
+        var halvesGroup = svg.querySelector('.centre-halves');
+        var labelsGroup = svg.querySelector('.centre-labels');
 
-        var QUARTERS = [
-            { cls: 'q-tl', action: 'enable',      start: 180, end: 270,
-              labelCls: 'label-tl', labelTxt: '●' },               /* solid dot */
-            { cls: 'q-tr', action: 'sync',        start: 270, end: 360,
-              labelCls: 'label-tr', labelTxt: 'H' },
-            { cls: 'q-bl', action: 'preset-prev', start: 90,  end: 180,
-              labelCls: 'label-bl', labelTxt: '‹' },               /* single < */
-            { cls: 'q-br', action: 'preset-next', start: 0,   end: 90,
-              labelCls: 'label-br', labelTxt: '›' }                /* single > */
-        ];
+        var topHalf = document.createElementNS(NS, 'path');
+        topHalf.setAttribute('d', halfPath(HALF_R, true));
+        topHalf.setAttribute('class', 'centre-half top');
+        topHalf.setAttribute('data-action', 'enable');
+        halvesGroup.appendChild(topHalf);
+        attachHalfHandlers(topHalf);
 
-        for (var k = 0; k < QUARTERS.length; k++) {
-            var q = QUARTERS[k];
-            var p = document.createElementNS(NS, 'path');
-            p.setAttribute('d', piePath(QTR_RADIUS, q.start, q.end));
-            p.setAttribute('class', 'quarter ' + q.cls);
-            p.setAttribute('data-action', q.action);
-            qGroup.appendChild(p);
-            attachQuarterHandlers(p);
+        var bottomHalf = document.createElementNS(NS, 'path');
+        bottomHalf.setAttribute('d', halfPath(HALF_R, false));
+        bottomHalf.setAttribute('class', 'centre-half bottom');
+        bottomHalf.setAttribute('data-action', 'sync');
+        halvesGroup.appendChild(bottomHalf);
+        attachHalfHandlers(bottomHalf);
 
-            /* Label at the centroid of each quarter (mid-angle, r = 22) */
-            var midDeg = (q.start + q.end) / 2;
-            var mr     = QTR_RADIUS * 0.55;
-            var lx     = CX + mr * Math.cos(deg2rad(midDeg));
-            var ly     = CY + mr * Math.sin(deg2rad(midDeg));
-            var lbl    = makeText(lx, ly, q.labelTxt, 'centre-label ' + q.labelCls);
-            lblGroup.appendChild(lbl);
-        }
+        /* Labels: TOP shows ON/OFF, BOTTOM shows HOST/FREE.
+         * y offsets are roughly half the radius so they sit nicely
+         * inside each half-disc. */
+        var topLabel    = makeText(CX, CY - HALF_R * 0.45, 'OFF',
+                                   'centre-label label-top');
+        var bottomLabel = makeText(CX, CY + HALF_R * 0.45, 'HOST',
+                                   'centre-label label-bottom');
+        labelsGroup.appendChild(topLabel);
+        labelsGroup.appendChild(bottomLabel);
     }
 
     /* ------------------------------------------------------------------ */
