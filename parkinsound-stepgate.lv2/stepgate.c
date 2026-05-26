@@ -86,6 +86,13 @@ typedef struct {
     double host_beat;
     double host_speed;
 
+    /* Last beat value we accepted from a time:Position event. Used to
+     * detect when the host is just re-emitting the same (possibly
+     * integer-quantised) beat value, in which case we let our per-
+     * sample integration drive host_beat instead of snapping back. */
+    double prev_received_beat;
+    int    has_prev_beat;
+
     /* Free-run state. */
     double free_phase;
     int    free_step;
@@ -130,14 +137,28 @@ handle_position(StepGate* self, const LV2_Atom_Object* obj)
         self->host_speed = get_atom_double(speed, uris);
     }
     /* Resynchronise the local beat counter to the host's absolute
-     * position whenever we get a fresh time:Position event. time:beat is
-     * preferred since it is the most direct; fall back to deriving from
-     * time:frame and the current BPM. */
-    if (beat) {
-        self->host_beat = get_atom_double(beat, uris);
-    } else if (frame && self->host_bpm > 0.0) {
+     * position whenever we get a fresh time:Position event.
+     *
+     * Some hosts (mod-host in particular) emit time:Position every
+     * processing block but only quantise time:beat to integer beats
+     * - between two integer ticks, every block carries the same beat
+     * value, which would freeze host_beat at that integer if we
+     * snapped to it blindly. We therefore only adopt time:beat when
+     * its value has actually changed since the previous event; in
+     * between, the per-sample beat_inc integration drives host_beat.
+     *
+     * time:frame is continuous (sample-precise) when present and is
+     * preferred whenever the host supplies it together with a BPM. */
+    if (frame && self->host_bpm > 0.0) {
         double f = get_atom_double(frame, uris);
         self->host_beat = f * self->host_bpm / (60.0 * self->sample_rate);
+    } else if (beat) {
+        double v = get_atom_double(beat, uris);
+        if (!self->has_prev_beat || v != self->prev_received_beat) {
+            self->host_beat = v;
+            self->has_prev_beat = 1;
+        }
+        self->prev_received_beat = v;
     }
 }
 
@@ -178,17 +199,19 @@ instantiate(const LV2_Descriptor* descriptor,
     u->time_speed          = map->map(map->handle, LV2_TIME__speed);
     u->time_frame          = map->map(map->handle, LV2_TIME__frame);
 
-    self->sample_rate  = rate;
-    self->host_bpm     = 0.0;
-    self->host_beat    = 0.0;
+    self->sample_rate         = rate;
+    self->host_bpm            = 0.0;
+    self->host_beat           = 0.0;
     /* Assume the host transport is running until it tells us otherwise.
      * mod-host has no explicit play/stop and emits no time:speed=0
      * events, so this default ensures we run freely on a MOD device. */
-    self->host_speed   = 1.0;
-    self->free_phase   = 0.0;
-    self->free_step    = 0;
-    self->prev_enabled = 1;
-    self->gate         = 0.0f;
+    self->host_speed          = 1.0;
+    self->prev_received_beat  = 0.0;
+    self->has_prev_beat       = 0;
+    self->free_phase          = 0.0;
+    self->free_step           = 0;
+    self->prev_enabled        = 1;
+    self->gate                = 0.0f;
 
     return (LV2_Handle)self;
 }
