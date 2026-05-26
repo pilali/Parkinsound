@@ -27,7 +27,7 @@
 #define SR     48000.0
 #define BLOCK  256
 #define SECS   4
-#define NPORTS 42
+#define NPORTS 47
 #define BUFSZ  4096
 
 static char* g_uris[1024];
@@ -168,6 +168,11 @@ main(void)
         ports[10 + s * 2] = 0.0f;  /* tie=0 -> 2 transitions per step */
     }
     ports[41] = 1.0f;  /* enabled */
+    ports[42] = 1.0f;  /* depth */
+    ports[43] = 0.0f;  /* attack */
+    ports[44] = 0.0f;  /* decay */
+    ports[45] = 1.0f;  /* sustain */
+    ports[46] = 0.5f;  /* release */
 
     static const char* names[6] = { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32" };
 
