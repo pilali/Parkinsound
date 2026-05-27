@@ -126,15 +126,22 @@ get_atom_double(const LV2_Atom* atom, const URIs* uris)
 }
 
 /* Per-step ADSR envelope, all times expressed as fractions of the step
- * duration. If A+D+R exceeds 1.0 the three are scaled down so the whole
- * envelope still fits inside the step. */
+ * duration. tied_in suppresses Attack and Decay (the note is the
+ * continuation of the previous step, already at sustain). tied_out
+ * suppresses Release (the next step is a tied continuation, so the gate
+ * must stay at sustain across the boundary). If the remaining A+D+R
+ * still exceeds 1.0 they are scaled down to fit. */
 static inline float
-adsr_env(double phase, float a, float d, float s, float r)
+step_env(double phase, float a, float d, float s, float r,
+         int tied_in, int tied_out)
 {
     if (a < 0.0f) a = 0.0f;
     if (d < 0.0f) d = 0.0f;
     if (r < 0.0f) r = 0.0f;
     if (s < 0.0f) s = 0.0f; else if (s > 1.0f) s = 1.0f;
+
+    if (tied_in)  { a = 0.0f; d = 0.0f; }
+    if (tied_out) { r = 0.0f; }
 
     float adr = a + d + r;
     if (adr > 1.0f) {
@@ -357,6 +364,17 @@ run(LV2_Handle instance, uint32_t n_samples)
     /* ~3 ms one-pole smoothing to avoid clicks on gate transitions. */
     const float gate_alpha = 1.0f - expf(-1.0f / (float)(0.003 * self->sample_rate));
 
+    /* Snapshot the per-step on/tie controls once per block. LV2 control
+     * ports are stable across run(), so we can resolve tie boundaries
+     * by looking at the previous and next steps without re-reading on
+     * every sample. */
+    int step_on_b[NUM_STEPS];
+    int step_tie_b[NUM_STEPS];
+    for (int k = 0; k < NUM_STEPS; ++k) {
+        step_on_b[k]  = (self->step_on[k]  && *self->step_on[k]  > 0.5f);
+        step_tie_b[k] = (self->step_tie[k] && *self->step_tie[k] > 0.5f);
+    }
+
     const float* inL  = self->audio_in_l;
     const float* inR  = self->audio_in_r;
     float*       outL = self->audio_out_l;
@@ -404,11 +422,19 @@ run(LV2_Handle instance, uint32_t n_samples)
             /* lv2:enabled = 0 -> transparent pass-through. */
             target = 1.0f;
         } else {
-            const int on  = (self->step_on[step]  && *self->step_on[step]  > 0.5f);
-            const int tie = (self->step_tie[step] && *self->step_tie[step] > 0.5f);
-            if (!on)         target = 0.0f;
-            else if (tie)    target = 1.0f;
-            else             target = adsr_env(in_step_phase, env_a, env_d, env_s, env_r);
+            const int on        = step_on_b[step];
+            const int prev_step = (step + NUM_STEPS - 1) % NUM_STEPS;
+            const int next_step = (step + 1) % NUM_STEPS;
+            /* tie has an anchor only if the previous step was on.
+             * Otherwise the tied step retriggers a fresh envelope. */
+            const int tied_in   = on && step_tie_b[step] && step_on_b[prev_step];
+            /* The boundary to the next step is held when the next step
+             * is itself a tied-on step. */
+            const int tied_out  = on && step_on_b[next_step] && step_tie_b[next_step];
+            if (!on) target = 0.0f;
+            else     target = step_env(in_step_phase,
+                                       env_a, env_d, env_s, env_r,
+                                       tied_in, tied_out);
         }
 
         self->gate += (target - self->gate) * gate_alpha;
