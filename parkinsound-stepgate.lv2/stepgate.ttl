@@ -324,37 +324,35 @@
         lv2:symbol "enabled" ;
         lv2:name "Enabled" ;
         lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
-        lv2:portProperty lv2:toggled , lv2:integer ;
+        lv2:portProperty lv2:toggled , lv2:integer , lv2:notOnGUI ;
     ] , [
         a lv2:ControlPort , lv2:InputPort ;
         lv2:index 42 ;
-        lv2:symbol "depth" ;
-        lv2:name "Depth" ;
-        lv2:default 1.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
-    ] , [
-        a lv2:ControlPort , lv2:InputPort ;
-        lv2:index 43 ;
         lv2:symbol "attack" ;
         lv2:name "Attack" ;
         lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+        lv2:portProperty lv2:notOnGUI ;
     ] , [
         a lv2:ControlPort , lv2:InputPort ;
-        lv2:index 44 ;
+        lv2:index 43 ;
         lv2:symbol "decay" ;
         lv2:name "Decay" ;
         lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+        lv2:portProperty lv2:notOnGUI ;
     ] , [
         a lv2:ControlPort , lv2:InputPort ;
-        lv2:index 45 ;
+        lv2:index 44 ;
         lv2:symbol "sustain" ;
         lv2:name "Sustain" ;
         lv2:default 1.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+        lv2:portProperty lv2:notOnGUI ;
     ] , [
         a lv2:ControlPort , lv2:InputPort ;
-        lv2:index 46 ;
+        lv2:index 45 ;
         lv2:symbol "release" ;
         lv2:name "Release" ;
         lv2:default 0.5 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+        lv2:portProperty lv2:notOnGUI ;
     ] ;
 
     modgui:gui [

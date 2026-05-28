@@ -1,17 +1,20 @@
 /*
  * Parkinsound Step Gate - modgui controller.
  *
- * Layout (250x385 viewBox, ring centre 125,125):
+ * Layout (250x360 viewBox, ring centre 125,125):
  *   - Tie ring  : annulus r in [85, 95]   (16 segments, no gap)
  *   - Step ring : annulus r in [50, 80]   (16 segments, 2deg gap)
  *   - Two centre halves: r in [0, 45]
- *       TOP    : toggles enabled (ON / OFF)
+ *       TOP    : toggles enabled (ON / OFF)  — soft bypass via set_port_value
  *       BOTTOM : toggles sync_source (HOST / FREE)
- *   - Depth knob : rotary arc at lower-left of bottom section
- *   - ADSR curve : white polyline with 3 draggable handles below the ring
+ *   - ADSR curve : white polyline with 3 draggable handles (y=258..348)
  *       Handle A  : x-drag → attack
  *       Handle DS : x-drag → decay, y-drag → sustain
  *       Handle R  : x-drag → release
+ *
+ * Bypass note: enabled uses set_port_value (soft bypass handled by the
+ * plugin's run() function).  The half-click handler captures iconEl
+ * directly rather than using closest() to avoid SVG→HTML traversal bugs.
  */
 function (event, funcs) {
     var NS         = 'http://www.w3.org/2000/svg';
@@ -24,13 +27,9 @@ function (event, funcs) {
     var START_DEG  = -90;
 
     /* ADSR display area */
-    var AX0  = 60;                          /* left edge of curve */
-    var AYT  = 262, AYB = 356;             /* top (amp=1.0), bottom (amp=0) */
-    var A_PX = 35, D_PX = 30, S_PX = 80, R_PX = 39; /* max pixel widths per section */
-
-    /* Depth knob (arc-style rotary dial) */
-    var DKX = 27, DKY = 309, DKR = 22;
-    var DK_START = 120, DK_SWEEP = 300; /* degrees, CW in SVG coord space */
+    var AX0  = 15;                         /* left edge of curve */
+    var AYT  = 258, AYB = 348;            /* top (amp=1.0), bottom (amp=0) */
+    var A_PX = 45, D_PX = 40, S_PX = 90, R_PX = 45; /* max pixel widths */
 
     /* ------------------------------------------------------------------ */
     /* Geometry helpers                                                    */
@@ -124,31 +123,7 @@ function (event, funcs) {
     }
 
     /* ------------------------------------------------------------------ */
-    /* Depth knob                                                          */
-    /* ------------------------------------------------------------------ */
-
-    function knobArc(cx, cy, r, startDeg, endDeg) {
-        var diff = endDeg - startDeg;
-        if (diff < 0.5) return '';
-        var s  = deg2rad(startDeg), e = deg2rad(endDeg);
-        var x1 = (cx + r * Math.cos(s)).toFixed(2);
-        var y1 = (cy + r * Math.sin(s)).toFixed(2);
-        var x2 = (cx + r * Math.cos(e)).toFixed(2);
-        var y2 = (cy + r * Math.sin(e)).toFixed(2);
-        var lg = diff > 180 ? 1 : 0;
-        return 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + lg + ' 1 ' + x2 + ' ' + y2;
-    }
-
-    function updateDepthKnob(iconEl) {
-        var arc = iconEl.querySelector('.depth-val-arc');
-        if (!arc) return;
-        var depth = iconEl._pgState.depth;
-        var d = knobArc(DKX, DKY, DKR, DK_START, DK_START + depth * DK_SWEEP);
-        arc.setAttribute('d', d || 'M 0 0');
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Apply functions (ring/centre state)                                 */
+    /* Apply functions (ring / centre state)                              */
     /* ------------------------------------------------------------------ */
 
     function applyEnabled(iconEl, on) {
@@ -187,7 +162,7 @@ function (event, funcs) {
     }
 
     /* ------------------------------------------------------------------ */
-    /* Click handlers (step / tie / centre halves)                        */
+    /* Click handlers (step / tie)                                        */
     /* ------------------------------------------------------------------ */
 
     function stopMouseDown(e) { e.stopPropagation(); }
@@ -205,30 +180,8 @@ function (event, funcs) {
         e.preventDefault();
     }
 
-    function onHalfClick(e) {
-        var action = this.getAttribute('data-action');
-        var icon   = this.closest('.parkinsound-stepgate-pedal');
-
-        if (action === 'enable') {
-            var enabled = !this.classList.contains('on');
-            if (funcs && typeof funcs.set_port_value === 'function') {
-                funcs.set_port_value('enabled', enabled ? 1 : 0);
-            }
-            applyEnabled(icon, enabled);
-        } else if (action === 'sync') {
-            var freeRun = !this.classList.contains('free');
-            if (funcs && typeof funcs.set_port_value === 'function') {
-                funcs.set_port_value('sync_source', freeRun ? 1 : 0);
-            }
-            applySync(icon, freeRun);
-        }
-
-        e.stopPropagation();
-        e.preventDefault();
-    }
-
     /* ------------------------------------------------------------------ */
-    /* Drag interaction (ADSR handles + depth knob)                       */
+    /* Drag interaction (ADSR handles)                                    */
     /* ------------------------------------------------------------------ */
 
     function getSvgScale(svgEl) {
@@ -240,15 +193,14 @@ function (event, funcs) {
         var svgEl = iconEl.querySelector('.parkinsound-stepgate-svg');
         var st    = iconEl._pgState;
         iconEl._pgDrag = {
-            symbol:   symbol,
-            startX:   e.clientX,
-            startY:   e.clientY,
-            scale:    getSvgScale(svgEl),
-            valA:     st.attack,
-            valD:     st.decay,
-            valS:     st.sustain,
-            valR:     st.release,
-            valDepth: st.depth
+            symbol:  symbol,
+            startX:  e.clientX,
+            startY:  e.clientY,
+            scale:   getSvgScale(svgEl),
+            valA:    st.attack,
+            valD:    st.decay,
+            valS:    st.sustain,
+            valR:    st.release
         };
         e.preventDefault();
         e.stopPropagation();
@@ -281,12 +233,6 @@ function (event, funcs) {
                 st.release = clamp(drag.valR + dx / R_PX, 0, 1);
                 if (funcs) funcs.set_port_value('release', st.release);
                 updateADSRCurve(iconEl);
-
-            } else if (drag.symbol === 'depth') {
-                /* vertical drag: up = increase depth */
-                st.depth = clamp(drag.valDepth - dy / 100, 0, 1);
-                if (funcs) funcs.set_port_value('depth', st.depth);
-                updateDepthKnob(iconEl);
             }
         };
     }
@@ -305,10 +251,24 @@ function (event, funcs) {
         node.addEventListener('click',      onStepOrTieClick);
     }
 
-    function attachHalfHandlers(node) {
+    /* Capture iconEl directly to avoid SVG→HTML closest() traversal bugs. */
+    function attachHalfHandlers(node, iconEl) {
         node.addEventListener('mousedown',  stopMouseDown);
         node.addEventListener('touchstart', stopMouseDown);
-        node.addEventListener('click',      onHalfClick);
+        node.addEventListener('click', function(e) {
+            var action = node.getAttribute('data-action');
+            if (action === 'enable') {
+                var on = !node.classList.contains('on');
+                if (funcs) funcs.set_port_value('enabled', on ? 1 : 0);
+                applyEnabled(iconEl, on);
+            } else if (action === 'sync') {
+                var free = !node.classList.contains('free');
+                if (funcs) funcs.set_port_value('sync_source', free ? 1 : 0);
+                applySync(iconEl, free);
+            }
+            e.stopPropagation();
+            e.preventDefault();
+        });
     }
 
     /* ------------------------------------------------------------------ */
@@ -325,7 +285,6 @@ function (event, funcs) {
         var stepGroup   = svg.querySelector('.step-ring');
         var halvesGroup = svg.querySelector('.centre-halves');
         var labelsGroup = svg.querySelector('.centre-labels');
-        var depthGroup  = svg.querySelector('.depth-group');
         var adsrGroup   = svg.querySelector('.adsr-group');
 
         /* --- 16 step + 16 tie sectors --- */
@@ -359,14 +318,14 @@ function (event, funcs) {
         topHalf.setAttribute('class',       'centre-half top');
         topHalf.setAttribute('data-action', 'enable');
         halvesGroup.appendChild(topHalf);
-        attachHalfHandlers(topHalf);
+        attachHalfHandlers(topHalf, iconEl);
 
         var bottomHalf = document.createElementNS(NS, 'path');
         bottomHalf.setAttribute('d',           halfPath(HALF_R, false));
         bottomHalf.setAttribute('class',       'centre-half bottom');
         bottomHalf.setAttribute('data-action', 'sync');
         halvesGroup.appendChild(bottomHalf);
-        attachHalfHandlers(bottomHalf);
+        attachHalfHandlers(bottomHalf, iconEl);
 
         var topLabel    = makeText(CX, CY - HALF_R * 0.45, 'OFF',  'centre-label label-top');
         var bottomLabel = makeText(CX, CY + HALF_R * 0.45, 'HOST', 'centre-label label-bottom');
@@ -375,7 +334,7 @@ function (event, funcs) {
 
         /* --- Separator line between ring and ADSR section --- */
         adsrGroup.appendChild(makeSvgEl('line', {
-            x1: '8', y1: '254', x2: '242', y2: '254',
+            x1: '8', y1: '253', x2: '242', y2: '253',
             class: 'adsr-separator'
         }));
 
@@ -405,11 +364,11 @@ function (event, funcs) {
         adsrGroup.appendChild(hD);
         adsrGroup.appendChild(hR);
 
-        /* ADSR section labels (static positions at midpoint of each section) */
-        var lblY = 372;
-        adsrGroup.appendChild(makeText(AX0 + A_PX * 0.5,               lblY, 'A', 'adsr-label'));
-        adsrGroup.appendChild(makeText(AX0 + A_PX + D_PX * 0.5,        lblY, 'D', 'adsr-label'));
-        adsrGroup.appendChild(makeText(AX0 + A_PX + D_PX + S_PX * 0.5, lblY, 'S', 'adsr-label'));
+        /* ADSR labels (static midpoints of each section) */
+        var lblY = 357;
+        adsrGroup.appendChild(makeText(AX0 + A_PX * 0.5,                      lblY, 'A', 'adsr-label'));
+        adsrGroup.appendChild(makeText(AX0 + A_PX + D_PX * 0.5,               lblY, 'D', 'adsr-label'));
+        adsrGroup.appendChild(makeText(AX0 + A_PX + D_PX + S_PX * 0.5,        lblY, 'S', 'adsr-label'));
         adsrGroup.appendChild(makeText(AX0 + A_PX + D_PX + S_PX + R_PX * 0.5, lblY, 'R', 'adsr-label'));
 
         /* Handle drag events */
@@ -418,39 +377,12 @@ function (event, funcs) {
                 startDrag(iconEl, symbol, e);
             });
             el.addEventListener('touchstart', function(e) {
-                if (e.touches.length === 1) {
-                    startDrag(iconEl, symbol, e.touches[0]);
-                }
+                if (e.touches.length === 1) startDrag(iconEl, symbol, e.touches[0]);
             });
         }
         addHandleDrag(hA, 'attack');
         addHandleDrag(hD, 'decay_sustain');
         addHandleDrag(hR, 'release');
-
-        /* --- Depth knob --- */
-        var trackD = knobArc(DKX, DKY, DKR, DK_START, DK_START + DK_SWEEP);
-        depthGroup.appendChild(makeSvgEl('path', {
-            d: trackD, class: 'depth-track-arc'
-        }));
-
-        var valD = knobArc(DKX, DKY, DKR, DK_START, DK_START + st.depth * DK_SWEEP);
-        depthGroup.appendChild(makeSvgEl('path', {
-            d: valD || 'M 0 0', class: 'depth-val-arc'
-        }));
-
-        /* Transparent hit area for mouse interaction */
-        var depthHit = makeSvgEl('circle', {
-            cx: DKX, cy: DKY, r: DKR + 8, class: 'depth-hit'
-        });
-        depthGroup.appendChild(depthHit);
-        depthHit.addEventListener('mousedown', function(e) {
-            startDrag(iconEl, 'depth', e);
-        });
-        depthHit.addEventListener('touchstart', function(e) {
-            if (e.touches.length === 1) startDrag(iconEl, 'depth', e.touches[0]);
-        });
-
-        depthGroup.appendChild(makeText(DKX, DKY + DKR + 13, 'DEPTH', 'depth-label'));
 
         /* --- Global drag handlers (attached once per icon element) --- */
         if (!iconEl._pgHandlers) {
@@ -478,9 +410,7 @@ function (event, funcs) {
 
     /* Persistent parameter state attached to the icon DOM element */
     if (!iconEl._pgState) {
-        iconEl._pgState = {
-            depth: 1.0, attack: 0.0, decay: 0.0, sustain: 1.0, release: 0.5
-        };
+        iconEl._pgState = { attack: 0.0, decay: 0.0, sustain: 1.0, release: 0.5 };
     }
 
     if (event.type === 'start') {
@@ -493,14 +423,12 @@ function (event, funcs) {
                 if      (sym === 'current_step') { highlightCurrentStep(iconEl, parseInt(event.value[sym], 10)); }
                 else if (sym === 'enabled')      { applyEnabled(iconEl, v > 0.5); }
                 else if (sym === 'sync_source')  { applySync(iconEl, v > 0.5); }
-                else if (sym === 'depth')        { iconEl._pgState.depth   = v; }
                 else if (sym === 'attack')       { iconEl._pgState.attack  = v; }
                 else if (sym === 'decay')        { iconEl._pgState.decay   = v; }
                 else if (sym === 'sustain')      { iconEl._pgState.sustain = v; }
                 else if (sym === 'release')      { iconEl._pgState.release = v; }
                 else if (sym.indexOf('step_') === 0) { applyStepValue(iconEl, sym, event.value[sym]); }
             }
-            updateDepthKnob(iconEl);
             updateADSRCurve(iconEl);
         }
         return;
@@ -512,7 +440,6 @@ function (event, funcs) {
         if      (sym2 === 'current_step') { highlightCurrentStep(iconEl, parseInt(event.value, 10)); }
         else if (sym2 === 'enabled')      { applyEnabled(iconEl, v2 > 0.5); }
         else if (sym2 === 'sync_source')  { applySync(iconEl, v2 > 0.5); }
-        else if (sym2 === 'depth')        { iconEl._pgState.depth   = v2; updateDepthKnob(iconEl); }
         else if (sym2 === 'attack')       { iconEl._pgState.attack  = v2; updateADSRCurve(iconEl); }
         else if (sym2 === 'decay')        { iconEl._pgState.decay   = v2; updateADSRCurve(iconEl); }
         else if (sym2 === 'sustain')      { iconEl._pgState.sustain = v2; updateADSRCurve(iconEl); }
