@@ -1,2 +1,6 @@
 *.so
 *.o
+test/divcheck
+test/divlive
+test/divhost
+test/divevents

@@ -45,7 +45,12 @@ typedef enum {
 } PortIndex;
 
 #define PORT_ENABLED (PORT_STEP_BASE + NUM_STEPS * 2)
-#define NUM_PORTS    (PORT_ENABLED + 1)
+#define PORT_DEPTH   (PORT_ENABLED + 1)
+#define PORT_ATTACK  (PORT_DEPTH   + 1)
+#define PORT_DECAY   (PORT_ATTACK  + 1)
+#define PORT_SUSTAIN (PORT_DECAY   + 1)
+#define PORT_RELEASE (PORT_SUSTAIN + 1)
+#define NUM_PORTS    (PORT_RELEASE + 1)
 
 typedef struct {
     LV2_URID atom_Blank;
@@ -77,6 +82,11 @@ typedef struct {
     const float* step_on[NUM_STEPS];
     const float* step_tie[NUM_STEPS];
     const float* enabled_port;
+    const float* depth_port;
+    const float* attack_port;
+    const float* decay_port;
+    const float* sustain_port;
+    const float* release_port;
 
     double sample_rate;
 
@@ -113,6 +123,40 @@ get_atom_double(const LV2_Atom* atom, const URIs* uris)
     if (atom->type == uris->atom_Int)    return ((const LV2_Atom_Int*)atom)->body;
     if (atom->type == uris->atom_Long)   return (double)((const LV2_Atom_Long*)atom)->body;
     return 0.0;
+}
+
+/* Per-step ADSR envelope, all times expressed as fractions of the step
+ * duration. tied_in suppresses Attack and Decay (the note is the
+ * continuation of the previous step, already at sustain). tied_out
+ * suppresses Release (the next step is a tied continuation, so the gate
+ * must stay at sustain across the boundary). If the remaining A+D+R
+ * still exceeds 1.0 they are scaled down to fit. */
+static inline float
+step_env(double phase, float a, float d, float s, float r,
+         int tied_in, int tied_out)
+{
+    if (a < 0.0f) a = 0.0f;
+    if (d < 0.0f) d = 0.0f;
+    if (r < 0.0f) r = 0.0f;
+    if (s < 0.0f) s = 0.0f; else if (s > 1.0f) s = 1.0f;
+
+    if (tied_in)  { a = 0.0f; d = 0.0f; }
+    if (tied_out) { r = 0.0f; }
+
+    float adr = a + d + r;
+    if (adr > 1.0f) {
+        float k = 1.0f / adr;
+        a *= k; d *= k; r *= k;
+    }
+    const float p      = (float)phase;
+    const float aend   = a;
+    const float dend   = a + d;
+    const float rstart = 1.0f - r;
+
+    if (p < aend)        return (a > 0.0f) ? p / a : 1.0f;
+    else if (p < dend)   return (d > 0.0f) ? 1.0f - (p - aend) / d * (1.0f - s) : s;
+    else if (p < rstart) return s;
+    else                 return (r > 0.0f) ? s * (1.0f - (p - rstart) / r) : 0.0f;
 }
 
 static void
@@ -231,9 +275,13 @@ connect_port(LV2_Handle instance, uint32_t port, void* data)
         case PORT_DIVISION:     self->division         = (const float*)data; break;
         case PORT_CURRENT_STEP: self->current_step_out = (float*)data; break;
         default:
-            if (port == PORT_ENABLED) {
-                self->enabled_port = (const float*)data;
-            } else if (port >= PORT_STEP_BASE && port < PORT_STEP_BASE + NUM_STEPS * 2u) {
+            if      (port == PORT_ENABLED) self->enabled_port = (const float*)data;
+            else if (port == PORT_DEPTH)   self->depth_port   = (const float*)data;
+            else if (port == PORT_ATTACK)  self->attack_port  = (const float*)data;
+            else if (port == PORT_DECAY)   self->decay_port   = (const float*)data;
+            else if (port == PORT_SUSTAIN) self->sustain_port = (const float*)data;
+            else if (port == PORT_RELEASE) self->release_port = (const float*)data;
+            else if (port >= PORT_STEP_BASE && port < PORT_STEP_BASE + NUM_STEPS * 2u) {
                 uint32_t local = port - PORT_STEP_BASE;
                 uint32_t step  = local / 2u;
                 if ((local & 1u) == 0u) self->step_on[step]  = (const float*)data;
@@ -275,6 +323,13 @@ run(LV2_Handle instance, uint32_t n_samples)
     const int   host_sync  = (sync == 0);
     const int   enabled    = (!self->enabled_port) || (*self->enabled_port > 0.5f);
 
+    float depth = self->depth_port ? *self->depth_port : 1.0f;
+    if (depth < 0.0f) depth = 0.0f; else if (depth > 1.0f) depth = 1.0f;
+    const float env_a = self->attack_port  ? *self->attack_port  : 0.0f;
+    const float env_d = self->decay_port   ? *self->decay_port   : 0.0f;
+    const float env_s = self->sustain_port ? *self->sustain_port : 1.0f;
+    const float env_r = self->release_port ? *self->release_port : 0.5f;
+
     double bpm;
     if (host_sync && self->host_bpm > 0.0) {
         bpm = self->host_bpm;
@@ -308,6 +363,17 @@ run(LV2_Handle instance, uint32_t n_samples)
 
     /* ~3 ms one-pole smoothing to avoid clicks on gate transitions. */
     const float gate_alpha = 1.0f - expf(-1.0f / (float)(0.003 * self->sample_rate));
+
+    /* Snapshot the per-step on/tie controls once per block. LV2 control
+     * ports are stable across run(), so we can resolve tie boundaries
+     * by looking at the previous and next steps without re-reading on
+     * every sample. */
+    int step_on_b[NUM_STEPS];
+    int step_tie_b[NUM_STEPS];
+    for (int k = 0; k < NUM_STEPS; ++k) {
+        step_on_b[k]  = (self->step_on[k]  && *self->step_on[k]  > 0.5f);
+        step_tie_b[k] = (self->step_tie[k] && *self->step_tie[k] > 0.5f);
+    }
 
     const float* inL  = self->audio_in_l;
     const float* inR  = self->audio_in_r;
@@ -356,19 +422,32 @@ run(LV2_Handle instance, uint32_t n_samples)
             /* lv2:enabled = 0 -> transparent pass-through. */
             target = 1.0f;
         } else {
-            const int on  = (self->step_on[step]  && *self->step_on[step]  > 0.5f);
-            const int tie = (self->step_tie[step] && *self->step_tie[step] > 0.5f);
-            if (!on)         target = 0.0f;
-            else if (tie)    target = 1.0f;
-            else             target = (in_step_phase < 0.5) ? 1.0f : 0.0f;
+            const int on        = step_on_b[step];
+            const int prev_step = (step + NUM_STEPS - 1) % NUM_STEPS;
+            const int next_step = (step + 1) % NUM_STEPS;
+            /* tie has an anchor only if the previous step was on.
+             * Otherwise the tied step retriggers a fresh envelope. */
+            const int tied_in   = on && step_tie_b[step] && step_on_b[prev_step];
+            /* The boundary to the next step is held when the next step
+             * is itself a tied-on step. */
+            const int tied_out  = on && step_on_b[next_step] && step_tie_b[next_step];
+            if (!on) target = 0.0f;
+            else     target = step_env(in_step_phase,
+                                       env_a, env_d, env_s, env_r,
+                                       tied_in, tied_out);
         }
 
         self->gate += (target - self->gate) * gate_alpha;
 
+        /* Depth mix: at depth=0 the gate floor is forced to 1.0 so the
+         * audio passes through unchanged; at depth=1 the smoothed gate
+         * reaches down to 0. */
+        const float eff_gate = (1.0f - depth) + depth * self->gate;
+
         const float sL = inL ? inL[i] : 0.0f;
         const float sR = inR ? inR[i] : 0.0f;
-        if (outL) outL[i] = sL * self->gate;
-        if (outR) outR[i] = sR * self->gate;
+        if (outL) outL[i] = sL * eff_gate;
+        if (outR) outR[i] = sR * eff_gate;
 
         display_step = step;
     }

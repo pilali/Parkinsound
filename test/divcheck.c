@@ -26,7 +26,7 @@
 #define SR     48000.0
 #define BLOCK  256
 #define SECS   4
-#define NPORTS 42
+#define NPORTS 47
 
 static char* g_uris[1024];
 static int   g_uris_n = 1;
@@ -84,6 +84,11 @@ main(void)
         ports[10 + s * 2] = 0.0f; /* step_N_tie */
     }
     ports[41] = 1.0f; /* enabled */
+    ports[42] = 1.0f; /* depth   = full effect */
+    ports[43] = 0.0f; /* attack  = instant */
+    ports[44] = 0.0f; /* decay   = instant */
+    ports[45] = 1.0f; /* sustain = full */
+    ports[46] = 0.5f; /* release = half-step -> mimics half-on/half-off */
 
     printf("Division | gate transitions per second (expected)\n");
     printf("---------+----------------------------------------\n");

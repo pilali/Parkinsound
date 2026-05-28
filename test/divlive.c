@@ -26,7 +26,7 @@
 
 #define SR     48000.0
 #define BLOCK  256
-#define NPORTS 42
+#define NPORTS 47
 
 static char* g_uris[1024];
 static int   g_uris_n = 1;
@@ -95,6 +95,11 @@ main(void)
         ports[10 + s * 2] = 0.0f;
     }
     ports[41] = 1.0f;   /* enabled */
+    ports[42] = 1.0f;   /* depth */
+    ports[43] = 0.0f;   /* attack */
+    ports[44] = 0.0f;   /* decay */
+    ports[45] = 1.0f;   /* sustain */
+    ports[46] = 0.5f;   /* release */
 
     /* Pair (start_div, target_div) */
     struct { int from; int to; } pairs[] = {
