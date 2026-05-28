@@ -27,9 +27,9 @@ function (event, funcs) {
     var START_DEG  = -90;
 
     /* ADSR display area */
-    var AX0  = 15;                         /* left edge of curve */
+    var AX0  = 10;                         /* left edge of curve (matches separator) */
     var AYT  = 258, AYB = 348;            /* top (amp=1.0), bottom (amp=0) */
-    var A_PX = 45, D_PX = 40, S_PX = 90, R_PX = 45; /* max pixel widths */
+    var A_PX = 50, D_PX = 44, S_PX = 96, R_PX = 40; /* max pixel widths — total 230, end x=240 */
 
     /* ------------------------------------------------------------------ */
     /* Geometry helpers                                                    */
