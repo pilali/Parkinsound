@@ -11,7 +11,7 @@
 .parkinsound-stepgate-pedal {
     position: relative;
     width: 250px;
-    height: 250px;
+    height: 385px;
     background: #000;
     color: #fff;
     font-family: sans-serif;
@@ -28,8 +28,8 @@
 }
 .parkinsound-stepgate-pedal .drag-zone.drag-tl { top: 0;    left: 0;  }
 .parkinsound-stepgate-pedal .drag-zone.drag-tr { top: 0;    right: 0; }
-.parkinsound-stepgate-pedal .drag-zone.drag-bl { bottom: 0; left: 0;  }
-.parkinsound-stepgate-pedal .drag-zone.drag-br { bottom: 0; right: 0; }
+.parkinsound-stepgate-pedal .drag-zone.drag-bl { top: 200px; left: 0;  }
+.parkinsound-stepgate-pedal .drag-zone.drag-br { top: 200px; right: 0; }
 
 /* --- SVG canvas filling the pedal --- */
 .parkinsound-stepgate-pedal .parkinsound-stepgate-svg {
@@ -115,4 +115,82 @@
 /* Top label flips colour when the top half is lit (white background) */
 .parkinsound-stepgate-pedal .centre-label.label-top.on {
     fill: #000;
+}
+
+/* --- Separator line between ring and ADSR section --- */
+.parkinsound-stepgate-pedal .adsr-separator {
+    stroke: #333;
+    stroke-width: 1;
+}
+
+/* --- ADSR curve and handles --- */
+.parkinsound-stepgate-pedal .adsr-curve {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+.parkinsound-stepgate-pedal .adsr-handle {
+    fill: #000;
+    stroke: #fff;
+    stroke-width: 1.5;
+    cursor: ew-resize;
+    pointer-events: all;
+}
+
+.parkinsound-stepgate-pedal .adsr-hd {
+    cursor: move;
+}
+
+.parkinsound-stepgate-pedal .adsr-handle:hover {
+    fill: #333;
+}
+
+.parkinsound-stepgate-pedal .adsr-label {
+    fill: #666;
+    font-size: 9px;
+    font-family: sans-serif;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 1px;
+}
+
+/* --- Depth knob --- */
+.parkinsound-stepgate-pedal .depth-track-arc {
+    fill: none;
+    stroke: #333;
+    stroke-width: 3;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+.parkinsound-stepgate-pedal .depth-val-arc {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 3;
+    stroke-linecap: round;
+    pointer-events: none;
+    transition: d 30ms linear;
+}
+
+.parkinsound-stepgate-pedal .depth-hit {
+    fill: transparent;
+    cursor: ns-resize;
+    pointer-events: all;
+}
+
+.parkinsound-stepgate-pedal .depth-label {
+    fill: #666;
+    font-size: 8px;
+    font-family: sans-serif;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 1px;
 }
