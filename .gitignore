@@ -4,3 +4,4 @@ test/divcheck
 test/divlive
 test/divhost
 test/divevents
+test/sync4

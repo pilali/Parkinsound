@@ -1,0 +1,42 @@
+<div class="parkinsound-stepgate4-pedal mod-pedal{{{cns}}}">
+
+    <!-- Drag handles: the brand area in the header (top-left) and a
+         footer strip. Everything else is reserved for the step grid,
+         division selectors and ADSR handles. -->
+    <div mod-role="drag-handle" class="mod-drag-handle drag-zone drag-brand"></div>
+    <div mod-role="drag-handle" class="mod-drag-handle drag-zone drag-footer"></div>
+
+    <!-- The whole UI is drawn dynamically by the modgui JS so all the
+         geometry lives in one place. -->
+    <svg class="parkinsound-stepgate4-svg"
+         viewBox="0 0 540 524"
+         preserveAspectRatio="xMidYMid meet"
+         xmlns="http://www.w3.org/2000/svg">
+        <rect class="bg" x="0" y="0" width="540" height="524"></rect>
+        <g class="content"></g>
+    </svg>
+
+    <!-- Standard mod-ui audio jacks. mod-ui draws the side-view 1/4"
+         plug graphics for each mono input / output port. -->
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected"
+             title="{{name}}"
+             mod-role="input-audio-port"
+             mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected"
+             title="{{name}}"
+             mod-role="output-audio-port"
+             mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
+
+</div>

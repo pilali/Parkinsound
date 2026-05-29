@@ -1,0 +1,203 @@
+/* Parkinsound Step Gate 4 modgui styles
+ *
+ * Pedal: 540x524 black rectangle.
+ * Header (y 0..44): brand (drag) + ENABLED / SYNC / TEMPO controls.
+ * Four channel rows, each: 16 step buttons + 16 tie buttons + a small
+ * ADSR curve, with a left gutter holding the channel label, division
+ * selector and current-step readout.
+ */
+
+.parkinsound-stepgate4-pedal {
+    position: relative;
+    width: 540px;
+    height: 524px;
+    background: #000;
+    color: #fff;
+    font-family: sans-serif;
+}
+
+/* --- Drag zones --- */
+.parkinsound-stepgate4-pedal .drag-zone {
+    position: absolute;
+    background: transparent;
+    cursor: move;
+    z-index: 10;
+}
+.parkinsound-stepgate4-pedal .drag-zone.drag-brand  { top: 0;     left: 0;  width: 160px; height: 44px; }
+.parkinsound-stepgate4-pedal .drag-zone.drag-footer { top: 500px; left: 0;  width: 540px; height: 24px; }
+
+/* --- SVG canvas --- */
+.parkinsound-stepgate4-pedal .parkinsound-stepgate4-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.parkinsound-stepgate4-pedal .bg {
+    fill: #000;
+    pointer-events: none;
+}
+
+/* --- Header text / brand --- */
+.parkinsound-stepgate4-pedal .brand {
+    fill: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate4-pedal .brand-sub {
+    fill: #777;
+    font-size: 9px;
+    letter-spacing: 2px;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* --- Step buttons --- */
+.parkinsound-stepgate4-pedal .step {
+    pointer-events: auto;
+    cursor: pointer;
+    stroke: none;
+    rx: 2px;
+    transition: fill 60ms linear, filter 60ms linear;
+}
+.parkinsound-stepgate4-pedal .step.off { fill: #4a4a4a; }
+.parkinsound-stepgate4-pedal .step.on {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 3px #ffffff)
+            drop-shadow(0 0 6px rgba(255,255,255,0.5));
+}
+.parkinsound-stepgate4-pedal .step.playing {
+    stroke: #ff7;
+    stroke-width: 2;
+    filter: drop-shadow(0 0 5px #ffffaa)
+            drop-shadow(0 0 12px rgba(255,255,150,0.8));
+}
+
+/* --- Tie buttons --- */
+.parkinsound-stepgate4-pedal .tie {
+    pointer-events: auto;
+    cursor: pointer;
+    stroke: none;
+    transition: fill 60ms linear;
+}
+.parkinsound-stepgate4-pedal .tie.off { fill: #2e2e2e; }
+.parkinsound-stepgate4-pedal .tie.on  { fill: #8fb7ff; }
+
+/* --- Generic centre buttons (enabled / sync) --- */
+.parkinsound-stepgate4-pedal .btn {
+    pointer-events: auto;
+    cursor: pointer;
+    fill: #1a1a1a;
+    stroke: #333;
+    stroke-width: 1;
+    transition: fill 80ms linear;
+}
+.parkinsound-stepgate4-pedal .btn:hover { fill: #2a2a2a; }
+.parkinsound-stepgate4-pedal .btn.on {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 3px #ffffff)
+            drop-shadow(0 0 6px rgba(255,255,255,0.5));
+}
+.parkinsound-stepgate4-pedal .btn-label {
+    fill: #ccc;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate4-pedal .btn-label.on { fill: #000; }
+
+/* --- Tempo readout (draggable) --- */
+.parkinsound-stepgate4-pedal .tempo-box {
+    pointer-events: auto;
+    cursor: ew-resize;
+    fill: #1a1a1a;
+    stroke: #333;
+    stroke-width: 1;
+}
+.parkinsound-stepgate4-pedal .tempo-box:hover { fill: #2a2a2a; }
+.parkinsound-stepgate4-pedal .tempo-value {
+    fill: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate4-pedal .tempo-unit {
+    fill: #777;
+    font-size: 8px;
+    letter-spacing: 1px;
+    text-anchor: middle;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* --- Per-channel gutter labels --- */
+.parkinsound-stepgate4-pedal .ch-label {
+    fill: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate4-pedal .div-box {
+    pointer-events: auto;
+    cursor: pointer;
+    fill: #161616;
+    stroke: #333;
+    stroke-width: 1;
+}
+.parkinsound-stepgate4-pedal .div-box:hover { fill: #262626; }
+.parkinsound-stepgate4-pedal .div-value {
+    fill: #8fb7ff;
+    font-size: 11px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate4-pedal .cur-step {
+    fill: #777;
+    font-size: 9px;
+    text-anchor: start;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* --- ADSR --- */
+.parkinsound-stepgate4-pedal .adsr-curve {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.3;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+    opacity: 0.85;
+}
+.parkinsound-stepgate4-pedal .adsr-handle {
+    fill: #000;
+    stroke: #fff;
+    stroke-width: 1.3;
+    cursor: ew-resize;
+    pointer-events: all;
+}
+.parkinsound-stepgate4-pedal .adsr-hd { cursor: move; }
+.parkinsound-stepgate4-pedal .adsr-handle:hover { fill: #333; }
+
+/* --- Row separators --- */
+.parkinsound-stepgate4-pedal .row-sep {
+    stroke: #1d1d1d;
+    stroke-width: 1;
+}
