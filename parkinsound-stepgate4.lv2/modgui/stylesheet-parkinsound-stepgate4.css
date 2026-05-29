@@ -20,6 +20,12 @@
     font-family: sans-serif;
 }
 
+/* Every text element in the UI uses a sans-serif face (SVG text does
+ * not reliably inherit font-family from the HTML container). */
+.parkinsound-stepgate4-pedal text {
+    font-family: sans-serif;
+}
+
 /* --- Drag zones --- */
 .parkinsound-stepgate4-pedal .drag-zone {
     position: absolute;
