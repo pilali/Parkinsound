@@ -1,16 +1,20 @@
 /* Parkinsound Step Gate 4 modgui styles
  *
- * Pedal: 540x524 black rectangle.
- * Header (y 0..44): brand (drag) + ENABLED / SYNC / TEMPO controls.
- * Four channel rows, each: 16 step buttons + 16 tie buttons + a small
- * ADSR curve, with a left gutter holding the channel label, division
- * selector and current-step readout.
+ * Reuses the visual language of the single-channel Step Gate (black
+ * pedal, white glowing steps/ties, white ADSR curve with draggable
+ * handles), laid out for four voices.
+ *
+ * Pedal: 552x360 black rectangle.
+ * Header (y 0..46): brand (drag) + ENABLED / SYNC / TEMPO.
+ * Four channel lines: 16 tie buttons on top of 16 step buttons, with a
+ * left gutter holding the channel label and division selector.
+ * One ADSR line below: the four voices' ADSR curves side by side.
  */
 
 .parkinsound-stepgate4-pedal {
     position: relative;
-    width: 540px;
-    height: 524px;
+    width: 552px;
+    height: 360px;
     background: #000;
     color: #fff;
     font-family: sans-serif;
@@ -23,8 +27,8 @@
     cursor: move;
     z-index: 10;
 }
-.parkinsound-stepgate4-pedal .drag-zone.drag-brand  { top: 0;     left: 0;  width: 160px; height: 44px; }
-.parkinsound-stepgate4-pedal .drag-zone.drag-footer { top: 500px; left: 0;  width: 540px; height: 24px; }
+.parkinsound-stepgate4-pedal .drag-zone.drag-brand  { top: 0;     left: 0; width: 168px; height: 46px; }
+.parkinsound-stepgate4-pedal .drag-zone.drag-footer { top: 344px; left: 0; width: 552px; height: 16px; }
 
 /* --- SVG canvas --- */
 .parkinsound-stepgate4-pedal .parkinsound-stepgate4-svg {
@@ -43,7 +47,7 @@
 /* --- Header text / brand --- */
 .parkinsound-stepgate4-pedal .brand {
     fill: #fff;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
     letter-spacing: 1px;
     pointer-events: none;
@@ -57,54 +61,56 @@
     user-select: none;
 }
 
-/* --- Step buttons --- */
+/* --- Step buttons (lower row, thick) --- */
 .parkinsound-stepgate4-pedal .step {
     pointer-events: auto;
     cursor: pointer;
     stroke: none;
-    rx: 2px;
     transition: fill 60ms linear, filter 60ms linear;
 }
 .parkinsound-stepgate4-pedal .step.off { fill: #4a4a4a; }
 .parkinsound-stepgate4-pedal .step.on {
     fill: #ffffff;
-    filter: drop-shadow(0 0 3px #ffffff)
-            drop-shadow(0 0 6px rgba(255,255,255,0.5));
+    filter: drop-shadow(0 0 4px #ffffff)
+            drop-shadow(0 0 8px rgba(255,255,255,0.6));
 }
+/* Pulse the currently-playing step. */
 .parkinsound-stepgate4-pedal .step.playing {
-    stroke: #ff7;
-    stroke-width: 2;
-    filter: drop-shadow(0 0 5px #ffffaa)
-            drop-shadow(0 0 12px rgba(255,255,150,0.8));
+    filter: drop-shadow(0 0 6px #ffffff)
+            drop-shadow(0 0 14px rgba(255,255,255,0.85));
 }
 
-/* --- Tie buttons --- */
+/* --- Tie buttons (upper row, thin) --- */
 .parkinsound-stepgate4-pedal .tie {
     pointer-events: auto;
     cursor: pointer;
     stroke: none;
-    transition: fill 60ms linear;
+    transition: fill 60ms linear, filter 60ms linear;
 }
-.parkinsound-stepgate4-pedal .tie.off { fill: #2e2e2e; }
-.parkinsound-stepgate4-pedal .tie.on  { fill: #8fb7ff; }
+.parkinsound-stepgate4-pedal .tie.off { fill: #3a3a3a; }
+.parkinsound-stepgate4-pedal .tie.on {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 3px #ffffff)
+            drop-shadow(0 0 6px rgba(255,255,255,0.55));
+}
 
-/* --- Generic centre buttons (enabled / sync) --- */
+/* --- Header buttons (enabled / sync), styled like the base centre halves --- */
 .parkinsound-stepgate4-pedal .btn {
     pointer-events: auto;
     cursor: pointer;
     fill: #1a1a1a;
-    stroke: #333;
-    stroke-width: 1;
-    transition: fill 80ms linear;
+    stroke: #000;
+    stroke-width: 1.5;
+    transition: fill 80ms linear, filter 80ms linear;
 }
 .parkinsound-stepgate4-pedal .btn:hover { fill: #2a2a2a; }
 .parkinsound-stepgate4-pedal .btn.on {
     fill: #ffffff;
     filter: drop-shadow(0 0 3px #ffffff)
-            drop-shadow(0 0 6px rgba(255,255,255,0.5));
+            drop-shadow(0 0 6px rgba(255,255,255,0.55));
 }
 .parkinsound-stepgate4-pedal .btn-label {
-    fill: #ccc;
+    fill: #bbb;
     font-size: 11px;
     font-weight: bold;
     letter-spacing: 1px;
@@ -120,8 +126,8 @@
     pointer-events: auto;
     cursor: ew-resize;
     fill: #1a1a1a;
-    stroke: #333;
-    stroke-width: 1;
+    stroke: #000;
+    stroke-width: 1.5;
 }
 .parkinsound-stepgate4-pedal .tempo-box:hover { fill: #2a2a2a; }
 .parkinsound-stepgate4-pedal .tempo-value {
@@ -142,7 +148,7 @@
     user-select: none;
 }
 
-/* --- Per-channel gutter labels --- */
+/* --- Per-channel gutter --- */
 .parkinsound-stepgate4-pedal .ch-label {
     fill: #fff;
     font-size: 12px;
@@ -160,7 +166,7 @@
 }
 .parkinsound-stepgate4-pedal .div-box:hover { fill: #262626; }
 .parkinsound-stepgate4-pedal .div-value {
-    fill: #8fb7ff;
+    fill: #fff;
     font-size: 11px;
     font-weight: bold;
     text-anchor: middle;
@@ -168,36 +174,47 @@
     pointer-events: none;
     user-select: none;
 }
-.parkinsound-stepgate4-pedal .cur-step {
-    fill: #777;
-    font-size: 9px;
-    text-anchor: start;
+
+/* --- Separator above the ADSR section --- */
+.parkinsound-stepgate4-pedal .adsr-sep {
+    stroke: #333;
+    stroke-width: 1;
+}
+
+/* --- ADSR (four voices side by side) --- */
+.parkinsound-stepgate4-pedal .col-label {
+    fill: #888;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-anchor: middle;
     pointer-events: none;
     user-select: none;
 }
-
-/* --- ADSR --- */
 .parkinsound-stepgate4-pedal .adsr-curve {
     fill: none;
     stroke: #fff;
-    stroke-width: 1.3;
+    stroke-width: 1.5;
     stroke-linejoin: round;
     stroke-linecap: round;
     pointer-events: none;
-    opacity: 0.85;
 }
 .parkinsound-stepgate4-pedal .adsr-handle {
     fill: #000;
     stroke: #fff;
-    stroke-width: 1.3;
+    stroke-width: 1.5;
     cursor: ew-resize;
     pointer-events: all;
 }
 .parkinsound-stepgate4-pedal .adsr-hd { cursor: move; }
 .parkinsound-stepgate4-pedal .adsr-handle:hover { fill: #333; }
-
-/* --- Row separators --- */
-.parkinsound-stepgate4-pedal .row-sep {
-    stroke: #1d1d1d;
-    stroke-width: 1;
+.parkinsound-stepgate4-pedal .adsr-label {
+    fill: #666;
+    font-size: 9px;
+    font-family: sans-serif;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 1px;
 }

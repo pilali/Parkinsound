@@ -1,21 +1,21 @@
 /*
  * Parkinsound Step Gate 4 - modgui controller.
  *
- * Layout (540x524 viewBox):
- *   Header (y 0..44):
+ * Reuses the single-channel Step Gate visual language for four voices.
+ *
+ * Layout (552x360 viewBox):
+ *   Header (y 0..46):
  *     - brand text (drag handle area)
- *     - ENABLED button   (soft bypass, set_port_value 'enabled')
+ *     - ENABLED button   (soft bypass, 'enabled')
  *     - SYNC button      (HOST / FREE, 'sync_source')
  *     - TEMPO readout    (x-drag, 'tempo')
- *   Four channel rows, each:
- *     - left gutter: "CHn", division selector (click cycles), current step
- *     - 16 step buttons  ('chN_step_M_on')
- *     - 16 tie  buttons  ('chN_step_M_tie')
- *     - ADSR curve with 3 draggable handles ('chN_attack' ...)
+ *   Four channel lines, each:
+ *     - 16 tie buttons on top of 16 step buttons
+ *     - left gutter: "CHn" label + division selector (click cycles)
+ *   One ADSR line below: the four voices' ADSR curves side by side,
+ *     each with three draggable handles.
  *
- * Everything is built dynamically so the geometry is defined once. The
- * four channels are completely independent in the UI; only ENABLED,
- * SYNC and TEMPO are shared.
+ * Only ENABLED, SYNC and TEMPO are shared; everything else is per voice.
  */
 function (event, funcs) {
     var NS     = 'http://www.w3.org/2000/svg';
@@ -23,27 +23,28 @@ function (event, funcs) {
     var NSTEPS = 16;
 
     /* ---- Layout constants -------------------------------------------- */
-    var HEADER_H = 44;
-    var STEP_X0  = 80, STEP_W = 25, STEP_GAP = 3;
-    var STEP_H   = 26, TIE_H = 9;
-    var CH_TOP0  = 56, CH_H = 116;
+    var STEP_X0 = 92, STEP_PITCH = 28, STEP_W = 24;
+    var TIE_H = 9, STEP_H = 26, TIE_STEP_GAP = 3;
+    var CH_TOP0 = 54, CH_H = 50;
 
-    /* ADSR section pixel widths (sum + AX0 must stay within the grid). */
-    var AX0  = STEP_X0;
-    var A_PX = 90, D_PX = 80, S_PX = 170, R_PX = 80;
-    var ADSR_H = 48;
+    var ADSR_SEP_Y = 250;
+    var ADSR_TOP   = 258;
+    var COL_X0 = 16, COL_W = 130;
+    var A_PX = 24, D_PX = 20, S_PX = 46, R_PX = 20;
 
     var DIV_LABELS = ['1/1', '1/2', '1/4', '1/8', '1/16', '1/32'];
 
     /* ---- Geometry helpers -------------------------------------------- */
     function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
-    function stepX(s)    { return STEP_X0 + s * (STEP_W + STEP_GAP); }
-    function rowTop(ch)  { return CH_TOP0 + ch * CH_H; }
-    function stepY(ch)   { return rowTop(ch); }
-    function tieY(ch)    { return rowTop(ch) + STEP_H + 2; }
-    function adsrTop(ch) { return rowTop(ch) + STEP_H + TIE_H + 8; }
-    function adsrBot(ch) { return adsrTop(ch) + ADSR_H; }
+    function stepX(s)   { return STEP_X0 + s * STEP_PITCH; }
+    function tieY(ch)   { return CH_TOP0 + ch * CH_H; }
+    function stepY(ch)  { return tieY(ch) + TIE_H + TIE_STEP_GAP; }
+
+    function colX(ch)   { return COL_X0 + ch * COL_W; }
+    function adsrAx0(ch){ return colX(ch) + 12; }
+    function adsrYT()   { return ADSR_TOP + 18; }
+    function adsrYB()   { return ADSR_TOP + 70; }
 
     function makeEl(tag, attrs) {
         var el = document.createElementNS(NS, tag);
@@ -63,26 +64,23 @@ function (event, funcs) {
 
     /* ---- Per-icon state ---------------------------------------------- */
     function defaultState() {
-        var adsr = [];
+        var adsr = [], divs = [];
         for (var c = 0; c < NCH; c++) {
             adsr.push({ attack: 0.0, decay: 0.0, sustain: 1.0, release: 0.5 });
+            divs.push(4); /* 1/16 default */
         }
-        var divs = [];
-        for (var d = 0; d < NCH; d++) divs.push(4); /* 1/16 default */
         return { adsr: adsr, div: divs, tempo: 120 };
     }
 
     /* ---- ADSR geometry ----------------------------------------------- */
     function adsrPts(ch, st) {
-        var yt = adsrTop(ch), yb = adsrBot(ch);
-        var xa = AX0 + st.attack  * A_PX;
+        var ax0 = adsrAx0(ch), yt = adsrYT(), yb = adsrYB();
+        var xa = ax0 + st.attack  * A_PX;
         var xd = xa  + st.decay   * D_PX;
         var xs = xd  + S_PX;
         var xr = xs  + st.release * R_PX;
         var ys = yt + (1.0 - st.sustain) * (yb - yt);
-        return [
-            [AX0, yb], [xa, yt], [xd, ys], [xs, ys], [xr, yb]
-        ];
+        return [ [ax0, yb], [xa, yt], [xd, ys], [xs, ys], [xr, yb] ];
     }
 
     function ptsToStr(pts) {
@@ -94,12 +92,11 @@ function (event, funcs) {
     function updateADSR(iconEl, ch) {
         var st  = iconEl._pg.adsr[ch];
         var pts = adsrPts(ch, st);
-        var g   = iconEl;
-        var pl  = g.querySelector('.adsr-curve[data-ch="' + ch + '"]');
+        var pl  = iconEl.querySelector('.adsr-curve[data-ch="' + ch + '"]');
         if (pl) pl.setAttribute('points', ptsToStr(pts));
-        var hA = g.querySelector('.adsr-ha[data-ch="' + ch + '"]');
-        var hD = g.querySelector('.adsr-hd[data-ch="' + ch + '"]');
-        var hR = g.querySelector('.adsr-hr[data-ch="' + ch + '"]');
+        var hA = iconEl.querySelector('.adsr-ha[data-ch="' + ch + '"]');
+        var hD = iconEl.querySelector('.adsr-hd[data-ch="' + ch + '"]');
+        var hR = iconEl.querySelector('.adsr-hr[data-ch="' + ch + '"]');
         if (hA) { hA.setAttribute('cx', pts[1][0].toFixed(1)); hA.setAttribute('cy', pts[1][1].toFixed(1)); }
         if (hD) { hD.setAttribute('cx', pts[2][0].toFixed(1)); hD.setAttribute('cy', pts[2][1].toFixed(1)); }
         if (hR) { hR.setAttribute('cx', pts[4][0].toFixed(1)); hR.setAttribute('cy', pts[4][1].toFixed(1)); }
@@ -168,7 +165,7 @@ function (event, funcs) {
     /* ---- Drag (ADSR handles + tempo) --------------------------------- */
     function getScale(svgEl) {
         var rect = svgEl.getBoundingClientRect();
-        return rect.width > 0 ? 540 / rect.width : 1;
+        return rect.width > 0 ? 552 / rect.width : 1;
     }
 
     function startDrag(iconEl, info, e) {
@@ -203,7 +200,7 @@ function (event, funcs) {
             var ch = drag.ch;
             var st = iconEl._pg.adsr[ch];
             var n  = ch + 1;
-            var yb = adsrBot(ch), yt = adsrTop(ch);
+            var span = adsrYB() - adsrYT();
 
             if (drag.kind === 'attack') {
                 st.attack = clamp(drag.base.attack + dx / A_PX, 0, 1);
@@ -211,7 +208,7 @@ function (event, funcs) {
                 updateADSR(iconEl, ch);
             } else if (drag.kind === 'decay_sustain') {
                 st.decay   = clamp(drag.base.decay   + dx / D_PX, 0, 1);
-                st.sustain = clamp(drag.base.sustain - dy / (yb - yt), 0, 1);
+                st.sustain = clamp(drag.base.sustain - dy / span, 0, 1);
                 if (funcs) {
                     funcs.set_port_value('ch' + n + '_decay',   st.decay);
                     funcs.set_port_value('ch' + n + '_sustain', st.sustain);
@@ -238,24 +235,14 @@ function (event, funcs) {
 
         /* ----- Header ----- */
         g.appendChild(makeText(12, 22, 'PARKINSOUND', 'brand'));
-        g.appendChild(makeText(12, 36, 'STEP GATE 4', 'brand-sub'));
+        g.appendChild(makeText(12, 37, 'STEP GATE 4', 'brand-sub'));
 
-        /* ENABLED button */
-        var enBtn = makeEl('rect', {
-            x: 178, y: 9, width: 64, height: 26, rx: 4,
-            'class': 'btn', 'data-action': 'enable'
-        });
-        var enLbl = makeText(210, 23, 'OFF', 'btn-label');
-        enLbl.setAttribute('data-action', 'enable');
+        var enBtn = makeEl('rect', { x: 184, y: 10, width: 64, height: 26, rx: 4, 'class': 'btn', 'data-action': 'enable' });
+        var enLbl = makeText(216, 24, 'OFF', 'btn-label'); enLbl.setAttribute('data-action', 'enable');
         g.appendChild(enBtn); g.appendChild(enLbl);
 
-        /* SYNC button */
-        var syBtn = makeEl('rect', {
-            x: 250, y: 9, width: 70, height: 26, rx: 4,
-            'class': 'btn', 'data-action': 'sync'
-        });
-        var syLbl = makeText(285, 23, 'HOST', 'btn-label');
-        syLbl.setAttribute('data-action', 'sync');
+        var syBtn = makeEl('rect', { x: 256, y: 10, width: 70, height: 26, rx: 4, 'class': 'btn', 'data-action': 'sync' });
+        var syLbl = makeText(291, 24, 'HOST', 'btn-label'); syLbl.setAttribute('data-action', 'sync');
         g.appendChild(syBtn); g.appendChild(syLbl);
 
         function headerBtn(node, action) {
@@ -278,46 +265,25 @@ function (event, funcs) {
         headerBtn(enBtn, 'enable');
         headerBtn(syBtn, 'sync');
 
-        /* TEMPO readout (draggable) */
-        var tmBox = makeEl('rect', {
-            x: 360, y: 6, width: 78, height: 32, rx: 4, 'class': 'tempo-box'
-        });
+        var tmBox = makeEl('rect', { x: 360, y: 7, width: 78, height: 32, rx: 4, 'class': 'tempo-box' });
         g.appendChild(tmBox);
-        g.appendChild(makeText(399, 20, '120', 'tempo-value'));
-        g.appendChild(makeText(399, 33, 'BPM', 'tempo-unit'));
+        g.appendChild(makeText(399, 21, '120', 'tempo-value'));
+        g.appendChild(makeText(399, 34, 'BPM', 'tempo-unit'));
         (function () {
-            function begin(e) {
-                startDrag(iconEl, { kind: 'tempo', base: { tempo: iconEl._pg.tempo } }, e);
-            }
+            function begin(e) { startDrag(iconEl, { kind: 'tempo', base: { tempo: iconEl._pg.tempo } }, e); }
             tmBox.addEventListener('mousedown', begin);
-            tmBox.addEventListener('touchstart', function (e) {
-                if (e.touches.length === 1) begin(e.touches[0]);
-            });
+            tmBox.addEventListener('touchstart', function (e) { if (e.touches.length === 1) begin(e.touches[0]); });
         })();
 
-        /* ----- Channel rows ----- */
+        /* ----- Channel lines: tie row on top of step row ----- */
         for (var ch = 0; ch < NCH; ch++) {
-            var n  = ch + 1;
-            var rt = rowTop(ch);
+            var n = ch + 1;
 
-            /* separator above each row (except first) */
-            if (ch > 0) {
-                g.appendChild(makeEl('line', {
-                    x1: 6, y1: rt - 8, x2: 534, y2: rt - 8, 'class': 'row-sep'
-                }));
-            }
-
-            /* gutter: channel label */
-            g.appendChild(makeText(8, rt + 12, 'CH' + n, 'ch-label'));
-
-            /* gutter: division selector */
-            var dBox = makeEl('rect', {
-                x: 8, y: rt + 20, width: 56, height: 20, rx: 3,
-                'class': 'div-box', 'data-ch': ch
-            });
+            /* gutter: channel label + division selector */
+            g.appendChild(makeText(8, tieY(ch) + 14, 'CH' + n, 'ch-label'));
+            var dBox = makeEl('rect', { x: 8, y: tieY(ch) + 20, width: 64, height: 17, rx: 3, 'class': 'div-box', 'data-ch': ch });
             g.appendChild(dBox);
-            var dVal = makeText(36, rt + 30, DIV_LABELS[4], 'div-value');
-            dVal.setAttribute('data-ch', ch);
+            var dVal = makeText(40, tieY(ch) + 29, DIV_LABELS[4], 'div-value'); dVal.setAttribute('data-ch', ch);
             g.appendChild(dVal);
             (function (cch, box) {
                 function cycle(e) {
@@ -332,22 +298,8 @@ function (event, funcs) {
                 box.addEventListener('click', cycle);
             })(ch, dBox);
 
-            /* gutter: current step readout */
-            var cs = makeText(8, rt + 56, 'step -', 'cur-step');
-            cs.setAttribute('data-ch', ch);
-            g.appendChild(cs);
-
-            /* step + tie buttons */
             for (var s = 0; s < NSTEPS; s++) {
                 var x = stepX(s);
-
-                var stepRect = makeEl('rect', {
-                    x: x, y: stepY(ch), width: STEP_W, height: STEP_H, rx: 2,
-                    'class': 'step off',
-                    'data-ch': ch, 'data-step': (s + 1),
-                    'data-symbol': 'ch' + n + '_step_' + (s + 1) + '_on'
-                });
-                g.appendChild(stepRect);
 
                 var tieRect = makeEl('rect', {
                     x: x, y: tieY(ch), width: STEP_W, height: TIE_H, rx: 1.5,
@@ -357,25 +309,46 @@ function (event, funcs) {
                 });
                 g.appendChild(tieRect);
 
-                [stepRect, tieRect].forEach(function (node) {
+                var stepRect = makeEl('rect', {
+                    x: x, y: stepY(ch), width: STEP_W, height: STEP_H, rx: 2,
+                    'class': 'step off',
+                    'data-ch': ch, 'data-step': (s + 1),
+                    'data-symbol': 'ch' + n + '_step_' + (s + 1) + '_on'
+                });
+                g.appendChild(stepRect);
+
+                [tieRect, stepRect].forEach(function (node) {
                     node.addEventListener('mousedown', stopMouseDown);
                     node.addEventListener('touchstart', stopMouseDown);
                     node.addEventListener('click', onToggleClick);
                 });
             }
+        }
 
-            /* ADSR curve + handles */
-            var st  = iconEl._pg.adsr[ch];
-            var pts = adsrPts(ch, st);
-            var curve = makeEl('polyline', {
-                'class': 'adsr-curve', 'data-ch': ch, points: ptsToStr(pts)
-            });
-            g.appendChild(curve);
+        /* ----- Separator + ADSR line (four voices side by side) ----- */
+        g.appendChild(makeEl('line', { x1: 8, y1: ADSR_SEP_Y, x2: 544, y2: ADSR_SEP_Y, 'class': 'adsr-sep' }));
 
-            var hA = makeEl('circle', { cx: pts[1][0], cy: pts[1][1], r: 4.5, 'class': 'adsr-handle adsr-ha', 'data-ch': ch });
-            var hD = makeEl('circle', { cx: pts[2][0], cy: pts[2][1], r: 4.5, 'class': 'adsr-handle adsr-hd', 'data-ch': ch });
-            var hR = makeEl('circle', { cx: pts[4][0], cy: pts[4][1], r: 4.5, 'class': 'adsr-handle adsr-hr', 'data-ch': ch });
+        for (var c2 = 0; c2 < NCH; c2++) {
+            var nn  = c2 + 1;
+            var cx  = colX(c2) + COL_W / 2;
+            g.appendChild(makeText(cx, ADSR_TOP + 10, 'CH' + nn + ' ADSR', 'col-label'));
+
+            var st  = iconEl._pg.adsr[c2];
+            var pts = adsrPts(c2, st);
+            g.appendChild(makeEl('polyline', { 'class': 'adsr-curve', 'data-ch': c2, points: ptsToStr(pts) }));
+
+            var hA = makeEl('circle', { cx: pts[1][0], cy: pts[1][1], r: 4.5, 'class': 'adsr-handle adsr-ha', 'data-ch': c2 });
+            var hD = makeEl('circle', { cx: pts[2][0], cy: pts[2][1], r: 4.5, 'class': 'adsr-handle adsr-hd', 'data-ch': c2 });
+            var hR = makeEl('circle', { cx: pts[4][0], cy: pts[4][1], r: 4.5, 'class': 'adsr-handle adsr-hr', 'data-ch': c2 });
             g.appendChild(hA); g.appendChild(hD); g.appendChild(hR);
+
+            /* A/D/S/R section labels, like the base GUI */
+            var lblY = adsrYB() + 12;
+            var ax0  = adsrAx0(c2);
+            g.appendChild(makeText(ax0 + A_PX * 0.5,                       lblY, 'A', 'adsr-label'));
+            g.appendChild(makeText(ax0 + A_PX + D_PX * 0.5,                lblY, 'D', 'adsr-label'));
+            g.appendChild(makeText(ax0 + A_PX + D_PX + S_PX * 0.5,         lblY, 'S', 'adsr-label'));
+            g.appendChild(makeText(ax0 + A_PX + D_PX + S_PX + R_PX * 0.5,  lblY, 'R', 'adsr-label'));
 
             (function (cch, ha, hd, hr) {
                 function bind(el, kind) {
@@ -387,14 +360,12 @@ function (event, funcs) {
                         }, e);
                     }
                     el.addEventListener('mousedown', begin);
-                    el.addEventListener('touchstart', function (e) {
-                        if (e.touches.length === 1) begin(e.touches[0]);
-                    });
+                    el.addEventListener('touchstart', function (e) { if (e.touches.length === 1) begin(e.touches[0]); });
                 }
                 bind(ha, 'attack');
                 bind(hd, 'decay_sustain');
                 bind(hr, 'release');
-            })(ch, hA, hD, hR);
+            })(c2, hA, hD, hR);
         }
 
         /* global drag listeners (attached once) */
@@ -425,16 +396,12 @@ function (event, funcs) {
             applyDivision(iconEl, parseInt(m[1], 10) - 1, parseFloat(value)); return;
         }
         if ((m = sym.match(/^ch(\d)_current_step$/))) {
-            var ch = parseInt(m[1], 10) - 1;
-            highlightStep(iconEl, ch, parseInt(value, 10));
-            var cs = iconEl.querySelector('.cur-step[data-ch="' + ch + '"]');
-            if (cs) cs.textContent = 'step ' + parseInt(value, 10);
-            return;
+            highlightStep(iconEl, parseInt(m[1], 10) - 1, parseInt(value, 10)); return;
         }
         if ((m = sym.match(/^ch(\d)_(attack|decay|sustain|release)$/))) {
-            var c2 = parseInt(m[1], 10) - 1;
-            iconEl._pg.adsr[c2][m[2]] = parseFloat(value);
-            updateADSR(iconEl, c2);
+            var c = parseInt(m[1], 10) - 1;
+            iconEl._pg.adsr[c][m[2]] = parseFloat(value);
+            updateADSR(iconEl, c);
             return;
         }
         if (/^ch\d_step_\d+_(on|tie)$/.test(sym)) {
@@ -452,7 +419,6 @@ function (event, funcs) {
     if (event.type === 'start') {
         build(icon);
         if (event.value) {
-            /* First pass: ADSR/division state, so curves render correctly. */
             for (var sym in event.value) {
                 if (!Object.prototype.hasOwnProperty.call(event.value, sym)) continue;
                 dispatch(iconEl, sym, event.value[sym]);
