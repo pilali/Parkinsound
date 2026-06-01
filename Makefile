@@ -11,9 +11,13 @@
 # recipes stay independent. `make` builds both.
 
 # ---- Single-channel (stereo) bundle ---------------------------------
+# The signal processing lives in the host-agnostic core src/stepgate_dsp.c
+# (shared with the JUCE / VST3 / AU build); the bundle .c is a thin LV2
+# wrapper that includes it.
 BUNDLE   = parkinsound-stepgate.lv2
 TARGET   = $(BUNDLE)/stepgate.so
-SOURCES  = $(BUNDLE)/stepgate.c
+SOURCES  = $(BUNDLE)/stepgate.c src/stepgate_dsp.c
+HEADERS  = src/stepgate_dsp.h
 
 # Factory preset bundles. Add one .ttl per preset following the
 # DragonflyPlate convention (filename == preset URI). Both the file
@@ -36,7 +40,7 @@ PRESETS4 = \
 CC ?= gcc
 
 # Allow mod-plugin-builder / Buildroot to inject its own flags; append ours.
-override CFLAGS  += -O2 -Wall -Wextra -fPIC -DPIC -fvisibility=hidden
+override CFLAGS  += -O2 -Wall -Wextra -fPIC -DPIC -fvisibility=hidden -Isrc
 override LDFLAGS += -shared
 
 # mod-plugin-builder honours INSTALL_PATH (defaults to /usr/lib/lv2 on the
@@ -56,7 +60,7 @@ all: stepgate stepgate4
 stepgate:  $(TARGET)
 stepgate4: $(TARGET4)
 
-$(TARGET): $(SOURCES)
+$(TARGET): $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) $(LDFLAGS) -lm
 
 $(TARGET4): $(SOURCES4)
