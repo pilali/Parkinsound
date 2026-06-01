@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 namespace {
 constexpr int kVersionHint = 1;
@@ -171,9 +172,7 @@ void StepGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 //==============================================================================
 juce::AudioProcessorEditor* StepGateAudioProcessor::createEditor()
 {
-    // Phase 2: generic editor to test parameters/automation immediately.
-    // Phase 3 replaces this with a custom editor mirroring the modgui.
-    return new juce::GenericAudioProcessorEditor(*this);
+    return new StepGateEditor(*this);
 }
 
 void StepGateAudioProcessor::getStateInformation(juce::MemoryBlock& destData)

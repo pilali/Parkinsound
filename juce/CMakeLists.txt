@@ -45,6 +45,7 @@ juce_add_plugin(ParkinsoundStepGate
 set(DSP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 target_sources(ParkinsoundStepGate PRIVATE
     PluginProcessor.cpp
+    PluginEditor.cpp
     ${DSP_DIR}/stepgate_dsp.c)
 target_include_directories(ParkinsoundStepGate PRIVATE ${DSP_DIR})
 
