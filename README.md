@@ -50,6 +50,23 @@ gcc -O2 -Wall -o test/sync4    test/sync4.c    -ldl -lm && ./test/sync4
 channels produce bit-identical output, and a slower channel's step boundaries
 land on the exact same samples as a faster channel's.
 
+## VST3 / AU / Standalone (JUCE, macOS + Windows)
+
+The single-channel Step Gate is also available as a cross-platform plug-in
+(VST3 + Audio Unit + Standalone) built with JUCE. The signal processing is
+shared with the LV2 build through a host-agnostic core (`src/stepgate_dsp.{c,h}`),
+so all three formats produce identical audio.
+
+```
+cmake -B juce/build -S juce -DCMAKE_BUILD_TYPE=Release
+cmake --build juce/build --config Release
+```
+
+JUCE is fetched automatically; pass `-DLOCAL_JUCE_DIR=/path/to/JUCE` for an
+offline checkout. On macOS the build is universal (arm64 + x86_64). GitHub
+Actions (`.github/workflows/build.yml`) produces macOS-universal and Windows
+artefacts. See `docs/lv2-to-multiplatform.md` for the porting playbook.
+
 ## Build with mod-plugin-builder
 
 (https://github.com/mod-audio/mod-plugin-builder)
