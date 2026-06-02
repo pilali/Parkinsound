@@ -17,6 +17,8 @@ This repository ships two plug-ins:
 
 ## Step Gate 4 (4 channels)
 
+![Step Gate 4 UI](parkinsound-stepgate4.lv2/modgui/screenshot-parkinsound-stepgate4.png)
+
 Step Gate 4 folds **four gate voices into a single plug-in**. All four channels
 are processed in the same `run()` call and advanced from one shared *master
 beat*, so they trigger simultaneously and stay phase-locked forever — ideal for
