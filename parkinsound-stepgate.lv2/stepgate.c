@@ -1,8 +1,14 @@
 /*
- * Parkinsound Step Gate - 16-step audio gate sequencer (LV2)
+ * Parkinsound Step Gate - 16-step audio gate sequencer (LV2 wrapper)
  *
  * Pure audio plugin: each step opens or closes a smoothed gain envelope
  * over the incoming stereo audio.
+ *
+ * This file is now a thin LV2 wrapper: all the signal processing lives in
+ * the host-agnostic core (src/stepgate_dsp.{c,h}), which is shared with
+ * the JUCE (VST3/AU/Standalone) build. The wrapper only maps LV2 ports
+ * and time:Position atoms onto the core's parameter struct and transport
+ * update, then calls stepgate_dsp_process().
  *
  * Per-step ADSR envelope shapes each active gate; sustain level and
  * all time parameters are expressed as fractions of the step duration.
@@ -22,8 +28,8 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <stdint.h>
+#include <math.h>
 
 #include <lv2/lv2plug.in/ns/lv2core/lv2.h>
 #include <lv2/lv2plug.in/ns/ext/atom/atom.h>
@@ -31,8 +37,10 @@
 #include <lv2/lv2plug.in/ns/ext/urid/urid.h>
 #include <lv2/lv2plug.in/ns/ext/time/time.h>
 
+#include "stepgate_dsp.h"
+
 #define PLUGIN_URI "https://github.com/pilali/parkinsound/lv2/stepgate"
-#define NUM_STEPS  16
+#define NUM_STEPS  STEPGATE_NUM_STEPS
 
 typedef enum {
     PORT_TIME_IN      = 0,
@@ -72,6 +80,8 @@ typedef struct {
     LV2_URID_Map* map;
     URIs uris;
 
+    StepGateDsp* dsp;
+
     const LV2_Atom_Sequence* time_in;
     const float* audio_in_l;
     const float* audio_in_r;
@@ -88,31 +98,6 @@ typedef struct {
     const float* decay_port;
     const float* sustain_port;
     const float* release_port;
-
-    double sample_rate;
-
-    /* Host transport state (updated from time:Position events and
-     * integrated sample-by-sample in between events). */
-    double host_bpm;
-    double host_beat;
-    double host_speed;
-
-    /* Last beat value we accepted from a time:Position event. Used to
-     * detect when the host is just re-emitting the same (possibly
-     * integer-quantised) beat value, in which case we let our per-
-     * sample integration drive host_beat instead of snapping back. */
-    double prev_received_beat;
-    int    has_prev_beat;
-
-    /* Free-run state. */
-    double free_phase;
-    int    free_step;
-
-    /* lv2:enabled transition detection. */
-    int    prev_enabled;
-
-    /* Gate smoothing. */
-    float  gate;
 } StepGate;
 
 static inline double
@@ -124,40 +109,6 @@ get_atom_double(const LV2_Atom* atom, const URIs* uris)
     if (atom->type == uris->atom_Int)    return ((const LV2_Atom_Int*)atom)->body;
     if (atom->type == uris->atom_Long)   return (double)((const LV2_Atom_Long*)atom)->body;
     return 0.0;
-}
-
-/* Per-step ADSR envelope, all times expressed as fractions of the step
- * duration. tied_in suppresses Attack and Decay (the note is the
- * continuation of the previous step, already at sustain). tied_out
- * suppresses Release (the next step is a tied continuation, so the gate
- * must stay at sustain across the boundary). If the remaining A+D+R
- * still exceeds 1.0 they are scaled down to fit. */
-static inline float
-step_env(double phase, float a, float d, float s, float r,
-         int tied_in, int tied_out)
-{
-    if (a < 0.0f) a = 0.0f;
-    if (d < 0.0f) d = 0.0f;
-    if (r < 0.0f) r = 0.0f;
-    if (s < 0.0f) s = 0.0f; else if (s > 1.0f) s = 1.0f;
-
-    if (tied_in)  { a = 0.0f; d = 0.0f; }
-    if (tied_out) { r = 0.0f; }
-
-    float adr = a + d + r;
-    if (adr > 1.0f) {
-        float k = 1.0f / adr;
-        a *= k; d *= k; r *= k;
-    }
-    const float p      = (float)phase;
-    const float aend   = a;
-    const float dend   = a + d;
-    const float rstart = 1.0f - r;
-
-    if (p < aend)        return (a > 0.0f) ? p / a : 1.0f;
-    else if (p < dend)   return (d > 0.0f) ? 1.0f - (p - aend) / d * (1.0f - s) : s;
-    else if (p < rstart) return s;
-    else                 return (r > 0.0f) ? s * (1.0f - (p - rstart) / r) : 0.0f;
 }
 
 static void
@@ -174,37 +125,11 @@ handle_position(StepGate* self, const LV2_Atom_Object* obj)
                         uris->time_speed,          &speed,
                         uris->time_frame,          &frame,
                         0);
-    if (bpm) {
-        double v = get_atom_double(bpm, uris);
-        if (v > 0.0) self->host_bpm = v;
-    }
-    if (speed) {
-        self->host_speed = get_atom_double(speed, uris);
-    }
-    /* Resynchronise the local beat counter to the host's absolute
-     * position whenever we get a fresh time:Position event.
-     *
-     * Some hosts (mod-host in particular) emit time:Position every
-     * processing block but only quantise time:beat to integer beats
-     * - between two integer ticks, every block carries the same beat
-     * value, which would freeze host_beat at that integer if we
-     * snapped to it blindly. We therefore only adopt time:beat when
-     * its value has actually changed since the previous event; in
-     * between, the per-sample beat_inc integration drives host_beat.
-     *
-     * time:frame is continuous (sample-precise) when present and is
-     * preferred whenever the host supplies it together with a BPM. */
-    if (frame && self->host_bpm > 0.0) {
-        double f = get_atom_double(frame, uris);
-        self->host_beat = f * self->host_bpm / (60.0 * self->sample_rate);
-    } else if (beat) {
-        double v = get_atom_double(beat, uris);
-        if (!self->has_prev_beat || v != self->prev_received_beat) {
-            self->host_beat = v;
-            self->has_prev_beat = 1;
-        }
-        self->prev_received_beat = v;
-    }
+    stepgate_dsp_update_position(self->dsp,
+                                 bpm   != NULL, get_atom_double(bpm,   uris),
+                                 beat  != NULL, get_atom_double(beat,  uris),
+                                 speed != NULL, get_atom_double(speed, uris),
+                                 frame != NULL, get_atom_double(frame, uris));
 }
 
 static LV2_Handle
@@ -244,19 +169,11 @@ instantiate(const LV2_Descriptor* descriptor,
     u->time_speed          = map->map(map->handle, LV2_TIME__speed);
     u->time_frame          = map->map(map->handle, LV2_TIME__frame);
 
-    self->sample_rate         = rate;
-    self->host_bpm            = 0.0;
-    self->host_beat           = 0.0;
-    /* Assume the host transport is running until it tells us otherwise.
-     * mod-host has no explicit play/stop and emits no time:speed=0
-     * events, so this default ensures we run freely on a MOD device. */
-    self->host_speed          = 1.0;
-    self->prev_received_beat  = 0.0;
-    self->has_prev_beat       = 0;
-    self->free_phase          = 0.0;
-    self->free_step           = 0;
-    self->prev_enabled        = 1;
-    self->gate                = 0.0f;
+    self->dsp = stepgate_dsp_new(rate);
+    if (!self->dsp) {
+        free(self);
+        return NULL;
+    }
 
     return (LV2_Handle)self;
 }
@@ -295,10 +212,7 @@ static void
 activate(LV2_Handle instance)
 {
     StepGate* self = (StepGate*)instance;
-    self->free_phase   = 0.0;
-    self->free_step    = 0;
-    self->prev_enabled = 1;
-    self->gate         = 0.0f;
+    stepgate_dsp_reset(self->dsp);
 }
 
 static void
@@ -318,135 +232,30 @@ run(LV2_Handle instance, uint32_t n_samples)
         }
     }
 
-    const int   sync       = self->sync_source ? (int)lroundf(*self->sync_source) : 0;
-    const float tempo_ctrl = self->tempo       ? *self->tempo                     : 120.0f;
-    const int   host_sync  = (sync == 0);
-    const int   enabled    = (!self->enabled_port) || (*self->enabled_port > 0.5f);
-
-    const float env_a = self->attack_port  ? *self->attack_port  : 0.0f;
-    const float env_d = self->decay_port   ? *self->decay_port   : 0.0f;
-    const float env_s = self->sustain_port ? *self->sustain_port : 1.0f;
-    const float env_r = self->release_port ? *self->release_port : 0.5f;
-
-    double bpm;
-    if (host_sync && self->host_bpm > 0.0) {
-        bpm = self->host_bpm;
-    } else {
-        bpm = (double)tempo_ctrl;
-    }
-    if (bpm < 20.0)  bpm = 20.0;
-    if (bpm > 999.0) bpm = 999.0;
-
-    /* division index -> step length expressed in quarter notes
-     * 0 = 1/1 whole       = 4 quarters
-     * 1 = 1/2 half        = 2 quarters
-     * 2 = 1/4 quarter     = 1 quarter
-     * 3 = 1/8 eighth      = 0.5
-     * 4 = 1/16 sixteenth  = 0.25
-     * 5 = 1/32            = 0.125 */
-    static const double div_factor[6] = { 4.0, 2.0, 1.0, 0.5, 0.25, 0.125 };
-    int div = self->division ? (int)lroundf(*self->division) : 4;
-    if (div < 0) div = 0;
-    if (div > 5) div = 5;
-    const double step_in_beats = div_factor[div];
-
-    const double beat_inc = bpm / (60.0 * self->sample_rate);
-
-    /* Free-run only: reset to step 1 when lv2:enabled goes 0 -> 1. */
-    if (!host_sync && enabled && !self->prev_enabled) {
-        self->free_phase = 0.0;
-        self->free_step  = 0;
-    }
-    self->prev_enabled = enabled;
-
-    /* ~3 ms one-pole smoothing to avoid clicks on gate transitions. */
-    const float gate_alpha = 1.0f - expf(-1.0f / (float)(0.003 * self->sample_rate));
-
-    /* Snapshot the per-step on/tie controls once per block. LV2 control
-     * ports are stable across run(), so we can resolve tie boundaries
-     * by looking at the previous and next steps without re-reading on
-     * every sample. */
-    int step_on_b[NUM_STEPS];
-    int step_tie_b[NUM_STEPS];
+    /* Map the LV2 control ports onto the core's parameter struct. Unmapped
+     * ports fall back to the .ttl defaults so behaviour is unchanged. */
+    StepGateParams p;
+    p.sync_source = self->sync_source ? *self->sync_source : 0.0f;
+    p.tempo       = self->tempo       ? *self->tempo       : 120.0f;
+    p.division    = self->division    ? *self->division    : 4.0f;
+    p.enabled     = self->enabled_port ? *self->enabled_port : 1.0f;
+    p.attack      = self->attack_port  ? *self->attack_port  : 0.0f;
+    p.decay       = self->decay_port   ? *self->decay_port   : 0.0f;
+    p.sustain     = self->sustain_port ? *self->sustain_port : 1.0f;
+    p.release     = self->release_port ? *self->release_port : 0.5f;
     for (int k = 0; k < NUM_STEPS; ++k) {
-        step_on_b[k]  = (self->step_on[k]  && *self->step_on[k]  > 0.5f);
-        step_tie_b[k] = (self->step_tie[k] && *self->step_tie[k] > 0.5f);
+        p.step_on[k]  = self->step_on[k]  ? *self->step_on[k]  : 0.0f;
+        p.step_tie[k] = self->step_tie[k] ? *self->step_tie[k] : 0.0f;
     }
 
-    const float* inL  = self->audio_in_l;
-    const float* inR  = self->audio_in_r;
-    float*       outL = self->audio_out_l;
-    float*       outR = self->audio_out_r;
-
-    int display_step = host_sync ? 0 : self->free_step;
-
-    for (uint32_t i = 0; i < n_samples; ++i) {
-        float target;
-        int   step          = 0;
-        double in_step_phase = 0.0;
-
-        if (host_sync) {
-            /* Always advance the beat counter while the plug-in is
-             * being clocked. mod-host has no JACK transport on a MOD
-             * device and emits time:Position with time:speed = 0,
-             * which would otherwise freeze the sequencer at step 1.
-             * In a DAW this means the pattern keeps cycling while
-             * the transport is paused, which is the right behaviour
-             * for a tremolo-style step gate. */
-            self->host_beat += beat_inc;
-            const double seq_pos    = self->host_beat / step_in_beats;
-            const double seq_floor  = floor(seq_pos);
-            long step_index = (long)seq_floor;
-            in_step_phase = seq_pos - seq_floor;
-            long mod_step = step_index % NUM_STEPS;
-            if (mod_step < 0) mod_step += NUM_STEPS;
-            step = (int)mod_step;
-        } else if (enabled) {
-            step = self->free_step;
-            in_step_phase = self->free_phase;
-            self->free_phase += beat_inc / step_in_beats;
-            if (self->free_phase >= 1.0) {
-                self->free_phase -= 1.0;
-                self->free_step = (self->free_step + 1) % NUM_STEPS;
-            }
-        } else {
-            /* Free-run + disabled: freeze at step 1 ready for the next
-             * enable transition. */
-            step = 0;
-            in_step_phase = 0.0;
-        }
-
-        if (!enabled) {
-            /* lv2:enabled = 0 -> transparent pass-through. */
-            target = 1.0f;
-        } else {
-            const int on        = step_on_b[step];
-            const int prev_step = (step + NUM_STEPS - 1) % NUM_STEPS;
-            const int next_step = (step + 1) % NUM_STEPS;
-            /* tie has an anchor only if the previous step was on.
-             * Otherwise the tied step retriggers a fresh envelope. */
-            const int tied_in   = on && step_tie_b[step] && step_on_b[prev_step];
-            /* The boundary to the next step is held when the next step
-             * is itself a tied-on step. */
-            const int tied_out  = on && step_on_b[next_step] && step_tie_b[next_step];
-            if (!on) target = 0.0f;
-            else     target = step_env(in_step_phase,
-                                       env_a, env_d, env_s, env_r,
-                                       tied_in, tied_out);
-        }
-
-        self->gate += (target - self->gate) * gate_alpha;
-
-        const float sL = inL ? inL[i] : 0.0f;
-        const float sR = inR ? inR[i] : 0.0f;
-        if (outL) outL[i] = sL * self->gate;
-        if (outR) outR[i] = sR * self->gate;
-
-        display_step = step;
-    }
+    const int display_step =
+        stepgate_dsp_process(self->dsp, &p,
+                             self->audio_in_l, self->audio_in_r,
+                             self->audio_out_l, self->audio_out_r,
+                             n_samples);
 
     if (self->current_step_out) {
-        *self->current_step_out = (float)(display_step + 1);
+        *self->current_step_out = (float)display_step;
     }
 }
 
@@ -459,7 +268,11 @@ deactivate(LV2_Handle instance)
 static void
 cleanup(LV2_Handle instance)
 {
-    free(instance);
+    StepGate* self = (StepGate*)instance;
+    if (self) {
+        stepgate_dsp_free(self->dsp);
+        free(self);
+    }
 }
 
 static const void*

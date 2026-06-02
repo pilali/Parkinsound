@@ -1,0 +1,46 @@
+name: build
+
+on:
+  push:
+    branches: [ JUCE ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: >
+          cmake -B juce/build -S juce -DCMAKE_BUILD_TYPE=Release
+          -DCOPY_AFTER_BUILD=OFF
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      - name: Build
+        run: cmake --build juce/build --config Release --parallel
+      - name: Show architectures
+        run: |
+          lipo -info "juce/build/ParkinsoundStepGate_artefacts/Release/AU/Parkinsound Step Gate.component/Contents/MacOS/Parkinsound Step Gate" || true
+          lipo -info "juce/build/ParkinsoundStepGate_artefacts/Release/VST3/Parkinsound Step Gate.vst3/Contents/MacOS/Parkinsound Step Gate" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ParkinsoundStepGate-macOS-universal
+          path: |
+            juce/build/ParkinsoundStepGate_artefacts/Release/AU/Parkinsound Step Gate.component
+            juce/build/ParkinsoundStepGate_artefacts/Release/VST3/Parkinsound Step Gate.vst3
+            juce/build/ParkinsoundStepGate_artefacts/Release/Standalone/Parkinsound Step Gate.app
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B juce/build -S juce -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=OFF
+      - name: Build
+        run: cmake --build juce/build --config Release --parallel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ParkinsoundStepGate-Windows
+          path: |
+            juce/build/ParkinsoundStepGate_artefacts/Release/VST3/Parkinsound Step Gate.vst3
+            juce/build/ParkinsoundStepGate_artefacts/Release/Standalone/Parkinsound Step Gate.exe

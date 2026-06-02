@@ -1,0 +1,1352 @@
+@prefix doap:   <http://usefulinc.com/ns/doap#> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
+@prefix atom:   <http://lv2plug.in/ns/ext/atom#> .
+@prefix urid:   <http://lv2plug.in/ns/ext/urid#> .
+@prefix time:   <http://lv2plug.in/ns/ext/time#> .
+@prefix units:  <http://lv2plug.in/ns/extensions/units#> .
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://github.com/pilali/parkinsound>
+    a doap:Project ;
+    doap:name "Parkinsound" .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate4>
+    a lv2:Plugin , lv2:FilterPlugin ;
+    doap:name "Parkinsound Step Gate 4" ;
+    doap:license <http://opensource.org/licenses/isc> ;
+    lv2:project <https://github.com/pilali/parkinsound> ;
+    lv2:minorVersion 1 ;
+    lv2:microVersion 0 ;
+    lv2:requiredFeature urid:map ;
+    lv2:optionalFeature lv2:hardRTCapable ;
+    lv2:port
+    [
+        a lv2:InputPort , atom:AtomPort ;
+        atom:bufferType atom:Sequence ;
+        atom:supports time:Position ;
+        lv2:designation lv2:control ;
+        lv2:index 0 ;
+        lv2:symbol "time_in" ;
+        lv2:name "Time" ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 1 ;
+        lv2:symbol "sync_source" ;
+        lv2:name "Sync Source" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "Host Sync" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "Free Run" ; rdf:value 1 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 2 ;
+        lv2:symbol "tempo" ;
+        lv2:name "Tempo" ;
+        lv2:default 120.0 ; lv2:minimum 20.0 ; lv2:maximum 300.0 ;
+        units:unit units:bpm ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 3 ;
+        lv2:symbol "enabled" ;
+        lv2:name "Enabled" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer , lv2:notOnGUI ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:InputPort ;
+        lv2:index 4 ;
+        lv2:symbol "in_1" ;
+        lv2:name "Audio In 1" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:InputPort ;
+        lv2:index 5 ;
+        lv2:symbol "in_2" ;
+        lv2:name "Audio In 2" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:InputPort ;
+        lv2:index 6 ;
+        lv2:symbol "in_3" ;
+        lv2:name "Audio In 3" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:InputPort ;
+        lv2:index 7 ;
+        lv2:symbol "in_4" ;
+        lv2:name "Audio In 4" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 8 ;
+        lv2:symbol "out_1" ;
+        lv2:name "Audio Out 1" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 9 ;
+        lv2:symbol "out_2" ;
+        lv2:name "Audio Out 2" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 10 ;
+        lv2:symbol "out_3" ;
+        lv2:name "Audio Out 3" ;
+    ] ,
+    [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 11 ;
+        lv2:symbol "out_4" ;
+        lv2:name "Audio Out 4" ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 12 ;
+        lv2:symbol "ch1_division" ;
+        lv2:name "Ch1 Division" ;
+        lv2:default 4 ; lv2:minimum 0 ; lv2:maximum 5 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "1/1" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "1/2" ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "1/4" ; rdf:value 2 ] ;
+        lv2:scalePoint [ rdfs:label "1/8" ; rdf:value 3 ] ;
+        lv2:scalePoint [ rdfs:label "1/16" ; rdf:value 4 ] ;
+        lv2:scalePoint [ rdfs:label "1/32" ; rdf:value 5 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 13 ;
+        lv2:symbol "ch1_current_step" ;
+        lv2:name "Ch1 Current Step" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 14 ;
+        lv2:symbol "ch1_attack" ;
+        lv2:name "Ch1 Attack" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 15 ;
+        lv2:symbol "ch1_decay" ;
+        lv2:name "Ch1 Decay" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 16 ;
+        lv2:symbol "ch1_sustain" ;
+        lv2:name "Ch1 Sustain" ;
+        lv2:default 1.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 17 ;
+        lv2:symbol "ch1_release" ;
+        lv2:name "Ch1 Release" ;
+        lv2:default 0.5 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 18 ;
+        lv2:symbol "ch1_step_1_on" ;
+        lv2:name "Ch1 Step 1 On" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 19 ;
+        lv2:symbol "ch1_step_1_tie" ;
+        lv2:name "Ch1 Step 1 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 20 ;
+        lv2:symbol "ch1_step_2_on" ;
+        lv2:name "Ch1 Step 2 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 21 ;
+        lv2:symbol "ch1_step_2_tie" ;
+        lv2:name "Ch1 Step 2 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 22 ;
+        lv2:symbol "ch1_step_3_on" ;
+        lv2:name "Ch1 Step 3 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 23 ;
+        lv2:symbol "ch1_step_3_tie" ;
+        lv2:name "Ch1 Step 3 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 24 ;
+        lv2:symbol "ch1_step_4_on" ;
+        lv2:name "Ch1 Step 4 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 25 ;
+        lv2:symbol "ch1_step_4_tie" ;
+        lv2:name "Ch1 Step 4 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 26 ;
+        lv2:symbol "ch1_step_5_on" ;
+        lv2:name "Ch1 Step 5 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 27 ;
+        lv2:symbol "ch1_step_5_tie" ;
+        lv2:name "Ch1 Step 5 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 28 ;
+        lv2:symbol "ch1_step_6_on" ;
+        lv2:name "Ch1 Step 6 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 29 ;
+        lv2:symbol "ch1_step_6_tie" ;
+        lv2:name "Ch1 Step 6 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 30 ;
+        lv2:symbol "ch1_step_7_on" ;
+        lv2:name "Ch1 Step 7 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 31 ;
+        lv2:symbol "ch1_step_7_tie" ;
+        lv2:name "Ch1 Step 7 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 32 ;
+        lv2:symbol "ch1_step_8_on" ;
+        lv2:name "Ch1 Step 8 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 33 ;
+        lv2:symbol "ch1_step_8_tie" ;
+        lv2:name "Ch1 Step 8 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 34 ;
+        lv2:symbol "ch1_step_9_on" ;
+        lv2:name "Ch1 Step 9 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 35 ;
+        lv2:symbol "ch1_step_9_tie" ;
+        lv2:name "Ch1 Step 9 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 36 ;
+        lv2:symbol "ch1_step_10_on" ;
+        lv2:name "Ch1 Step 10 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 37 ;
+        lv2:symbol "ch1_step_10_tie" ;
+        lv2:name "Ch1 Step 10 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 38 ;
+        lv2:symbol "ch1_step_11_on" ;
+        lv2:name "Ch1 Step 11 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 39 ;
+        lv2:symbol "ch1_step_11_tie" ;
+        lv2:name "Ch1 Step 11 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 40 ;
+        lv2:symbol "ch1_step_12_on" ;
+        lv2:name "Ch1 Step 12 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 41 ;
+        lv2:symbol "ch1_step_12_tie" ;
+        lv2:name "Ch1 Step 12 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 42 ;
+        lv2:symbol "ch1_step_13_on" ;
+        lv2:name "Ch1 Step 13 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 43 ;
+        lv2:symbol "ch1_step_13_tie" ;
+        lv2:name "Ch1 Step 13 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 44 ;
+        lv2:symbol "ch1_step_14_on" ;
+        lv2:name "Ch1 Step 14 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 45 ;
+        lv2:symbol "ch1_step_14_tie" ;
+        lv2:name "Ch1 Step 14 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 46 ;
+        lv2:symbol "ch1_step_15_on" ;
+        lv2:name "Ch1 Step 15 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 47 ;
+        lv2:symbol "ch1_step_15_tie" ;
+        lv2:name "Ch1 Step 15 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 48 ;
+        lv2:symbol "ch1_step_16_on" ;
+        lv2:name "Ch1 Step 16 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 49 ;
+        lv2:symbol "ch1_step_16_tie" ;
+        lv2:name "Ch1 Step 16 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 50 ;
+        lv2:symbol "ch2_division" ;
+        lv2:name "Ch2 Division" ;
+        lv2:default 4 ; lv2:minimum 0 ; lv2:maximum 5 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "1/1" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "1/2" ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "1/4" ; rdf:value 2 ] ;
+        lv2:scalePoint [ rdfs:label "1/8" ; rdf:value 3 ] ;
+        lv2:scalePoint [ rdfs:label "1/16" ; rdf:value 4 ] ;
+        lv2:scalePoint [ rdfs:label "1/32" ; rdf:value 5 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 51 ;
+        lv2:symbol "ch2_current_step" ;
+        lv2:name "Ch2 Current Step" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 52 ;
+        lv2:symbol "ch2_attack" ;
+        lv2:name "Ch2 Attack" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 53 ;
+        lv2:symbol "ch2_decay" ;
+        lv2:name "Ch2 Decay" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 54 ;
+        lv2:symbol "ch2_sustain" ;
+        lv2:name "Ch2 Sustain" ;
+        lv2:default 1.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 55 ;
+        lv2:symbol "ch2_release" ;
+        lv2:name "Ch2 Release" ;
+        lv2:default 0.5 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 56 ;
+        lv2:symbol "ch2_step_1_on" ;
+        lv2:name "Ch2 Step 1 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 57 ;
+        lv2:symbol "ch2_step_1_tie" ;
+        lv2:name "Ch2 Step 1 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 58 ;
+        lv2:symbol "ch2_step_2_on" ;
+        lv2:name "Ch2 Step 2 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 59 ;
+        lv2:symbol "ch2_step_2_tie" ;
+        lv2:name "Ch2 Step 2 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 60 ;
+        lv2:symbol "ch2_step_3_on" ;
+        lv2:name "Ch2 Step 3 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 61 ;
+        lv2:symbol "ch2_step_3_tie" ;
+        lv2:name "Ch2 Step 3 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 62 ;
+        lv2:symbol "ch2_step_4_on" ;
+        lv2:name "Ch2 Step 4 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 63 ;
+        lv2:symbol "ch2_step_4_tie" ;
+        lv2:name "Ch2 Step 4 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 64 ;
+        lv2:symbol "ch2_step_5_on" ;
+        lv2:name "Ch2 Step 5 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 65 ;
+        lv2:symbol "ch2_step_5_tie" ;
+        lv2:name "Ch2 Step 5 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 66 ;
+        lv2:symbol "ch2_step_6_on" ;
+        lv2:name "Ch2 Step 6 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 67 ;
+        lv2:symbol "ch2_step_6_tie" ;
+        lv2:name "Ch2 Step 6 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 68 ;
+        lv2:symbol "ch2_step_7_on" ;
+        lv2:name "Ch2 Step 7 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 69 ;
+        lv2:symbol "ch2_step_7_tie" ;
+        lv2:name "Ch2 Step 7 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 70 ;
+        lv2:symbol "ch2_step_8_on" ;
+        lv2:name "Ch2 Step 8 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 71 ;
+        lv2:symbol "ch2_step_8_tie" ;
+        lv2:name "Ch2 Step 8 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 72 ;
+        lv2:symbol "ch2_step_9_on" ;
+        lv2:name "Ch2 Step 9 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 73 ;
+        lv2:symbol "ch2_step_9_tie" ;
+        lv2:name "Ch2 Step 9 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 74 ;
+        lv2:symbol "ch2_step_10_on" ;
+        lv2:name "Ch2 Step 10 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 75 ;
+        lv2:symbol "ch2_step_10_tie" ;
+        lv2:name "Ch2 Step 10 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 76 ;
+        lv2:symbol "ch2_step_11_on" ;
+        lv2:name "Ch2 Step 11 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 77 ;
+        lv2:symbol "ch2_step_11_tie" ;
+        lv2:name "Ch2 Step 11 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 78 ;
+        lv2:symbol "ch2_step_12_on" ;
+        lv2:name "Ch2 Step 12 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 79 ;
+        lv2:symbol "ch2_step_12_tie" ;
+        lv2:name "Ch2 Step 12 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 80 ;
+        lv2:symbol "ch2_step_13_on" ;
+        lv2:name "Ch2 Step 13 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 81 ;
+        lv2:symbol "ch2_step_13_tie" ;
+        lv2:name "Ch2 Step 13 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 82 ;
+        lv2:symbol "ch2_step_14_on" ;
+        lv2:name "Ch2 Step 14 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 83 ;
+        lv2:symbol "ch2_step_14_tie" ;
+        lv2:name "Ch2 Step 14 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 84 ;
+        lv2:symbol "ch2_step_15_on" ;
+        lv2:name "Ch2 Step 15 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 85 ;
+        lv2:symbol "ch2_step_15_tie" ;
+        lv2:name "Ch2 Step 15 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 86 ;
+        lv2:symbol "ch2_step_16_on" ;
+        lv2:name "Ch2 Step 16 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 87 ;
+        lv2:symbol "ch2_step_16_tie" ;
+        lv2:name "Ch2 Step 16 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 88 ;
+        lv2:symbol "ch3_division" ;
+        lv2:name "Ch3 Division" ;
+        lv2:default 4 ; lv2:minimum 0 ; lv2:maximum 5 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "1/1" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "1/2" ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "1/4" ; rdf:value 2 ] ;
+        lv2:scalePoint [ rdfs:label "1/8" ; rdf:value 3 ] ;
+        lv2:scalePoint [ rdfs:label "1/16" ; rdf:value 4 ] ;
+        lv2:scalePoint [ rdfs:label "1/32" ; rdf:value 5 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 89 ;
+        lv2:symbol "ch3_current_step" ;
+        lv2:name "Ch3 Current Step" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 90 ;
+        lv2:symbol "ch3_attack" ;
+        lv2:name "Ch3 Attack" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 91 ;
+        lv2:symbol "ch3_decay" ;
+        lv2:name "Ch3 Decay" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 92 ;
+        lv2:symbol "ch3_sustain" ;
+        lv2:name "Ch3 Sustain" ;
+        lv2:default 1.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 93 ;
+        lv2:symbol "ch3_release" ;
+        lv2:name "Ch3 Release" ;
+        lv2:default 0.5 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 94 ;
+        lv2:symbol "ch3_step_1_on" ;
+        lv2:name "Ch3 Step 1 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 95 ;
+        lv2:symbol "ch3_step_1_tie" ;
+        lv2:name "Ch3 Step 1 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 96 ;
+        lv2:symbol "ch3_step_2_on" ;
+        lv2:name "Ch3 Step 2 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 97 ;
+        lv2:symbol "ch3_step_2_tie" ;
+        lv2:name "Ch3 Step 2 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 98 ;
+        lv2:symbol "ch3_step_3_on" ;
+        lv2:name "Ch3 Step 3 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 99 ;
+        lv2:symbol "ch3_step_3_tie" ;
+        lv2:name "Ch3 Step 3 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 100 ;
+        lv2:symbol "ch3_step_4_on" ;
+        lv2:name "Ch3 Step 4 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 101 ;
+        lv2:symbol "ch3_step_4_tie" ;
+        lv2:name "Ch3 Step 4 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 102 ;
+        lv2:symbol "ch3_step_5_on" ;
+        lv2:name "Ch3 Step 5 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 103 ;
+        lv2:symbol "ch3_step_5_tie" ;
+        lv2:name "Ch3 Step 5 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 104 ;
+        lv2:symbol "ch3_step_6_on" ;
+        lv2:name "Ch3 Step 6 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 105 ;
+        lv2:symbol "ch3_step_6_tie" ;
+        lv2:name "Ch3 Step 6 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 106 ;
+        lv2:symbol "ch3_step_7_on" ;
+        lv2:name "Ch3 Step 7 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 107 ;
+        lv2:symbol "ch3_step_7_tie" ;
+        lv2:name "Ch3 Step 7 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 108 ;
+        lv2:symbol "ch3_step_8_on" ;
+        lv2:name "Ch3 Step 8 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 109 ;
+        lv2:symbol "ch3_step_8_tie" ;
+        lv2:name "Ch3 Step 8 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 110 ;
+        lv2:symbol "ch3_step_9_on" ;
+        lv2:name "Ch3 Step 9 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 111 ;
+        lv2:symbol "ch3_step_9_tie" ;
+        lv2:name "Ch3 Step 9 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 112 ;
+        lv2:symbol "ch3_step_10_on" ;
+        lv2:name "Ch3 Step 10 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 113 ;
+        lv2:symbol "ch3_step_10_tie" ;
+        lv2:name "Ch3 Step 10 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 114 ;
+        lv2:symbol "ch3_step_11_on" ;
+        lv2:name "Ch3 Step 11 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 115 ;
+        lv2:symbol "ch3_step_11_tie" ;
+        lv2:name "Ch3 Step 11 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 116 ;
+        lv2:symbol "ch3_step_12_on" ;
+        lv2:name "Ch3 Step 12 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 117 ;
+        lv2:symbol "ch3_step_12_tie" ;
+        lv2:name "Ch3 Step 12 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 118 ;
+        lv2:symbol "ch3_step_13_on" ;
+        lv2:name "Ch3 Step 13 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 119 ;
+        lv2:symbol "ch3_step_13_tie" ;
+        lv2:name "Ch3 Step 13 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 120 ;
+        lv2:symbol "ch3_step_14_on" ;
+        lv2:name "Ch3 Step 14 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 121 ;
+        lv2:symbol "ch3_step_14_tie" ;
+        lv2:name "Ch3 Step 14 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 122 ;
+        lv2:symbol "ch3_step_15_on" ;
+        lv2:name "Ch3 Step 15 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 123 ;
+        lv2:symbol "ch3_step_15_tie" ;
+        lv2:name "Ch3 Step 15 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 124 ;
+        lv2:symbol "ch3_step_16_on" ;
+        lv2:name "Ch3 Step 16 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 125 ;
+        lv2:symbol "ch3_step_16_tie" ;
+        lv2:name "Ch3 Step 16 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 126 ;
+        lv2:symbol "ch4_division" ;
+        lv2:name "Ch4 Division" ;
+        lv2:default 4 ; lv2:minimum 0 ; lv2:maximum 5 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "1/1" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "1/2" ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "1/4" ; rdf:value 2 ] ;
+        lv2:scalePoint [ rdfs:label "1/8" ; rdf:value 3 ] ;
+        lv2:scalePoint [ rdfs:label "1/16" ; rdf:value 4 ] ;
+        lv2:scalePoint [ rdfs:label "1/32" ; rdf:value 5 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 127 ;
+        lv2:symbol "ch4_current_step" ;
+        lv2:name "Ch4 Current Step" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 128 ;
+        lv2:symbol "ch4_attack" ;
+        lv2:name "Ch4 Attack" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 129 ;
+        lv2:symbol "ch4_decay" ;
+        lv2:name "Ch4 Decay" ;
+        lv2:default 0.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 130 ;
+        lv2:symbol "ch4_sustain" ;
+        lv2:name "Ch4 Sustain" ;
+        lv2:default 1.0 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 131 ;
+        lv2:symbol "ch4_release" ;
+        lv2:name "Ch4 Release" ;
+        lv2:default 0.5 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 132 ;
+        lv2:symbol "ch4_step_1_on" ;
+        lv2:name "Ch4 Step 1 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 133 ;
+        lv2:symbol "ch4_step_1_tie" ;
+        lv2:name "Ch4 Step 1 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 134 ;
+        lv2:symbol "ch4_step_2_on" ;
+        lv2:name "Ch4 Step 2 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 135 ;
+        lv2:symbol "ch4_step_2_tie" ;
+        lv2:name "Ch4 Step 2 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 136 ;
+        lv2:symbol "ch4_step_3_on" ;
+        lv2:name "Ch4 Step 3 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 137 ;
+        lv2:symbol "ch4_step_3_tie" ;
+        lv2:name "Ch4 Step 3 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 138 ;
+        lv2:symbol "ch4_step_4_on" ;
+        lv2:name "Ch4 Step 4 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 139 ;
+        lv2:symbol "ch4_step_4_tie" ;
+        lv2:name "Ch4 Step 4 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 140 ;
+        lv2:symbol "ch4_step_5_on" ;
+        lv2:name "Ch4 Step 5 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 141 ;
+        lv2:symbol "ch4_step_5_tie" ;
+        lv2:name "Ch4 Step 5 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 142 ;
+        lv2:symbol "ch4_step_6_on" ;
+        lv2:name "Ch4 Step 6 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 143 ;
+        lv2:symbol "ch4_step_6_tie" ;
+        lv2:name "Ch4 Step 6 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 144 ;
+        lv2:symbol "ch4_step_7_on" ;
+        lv2:name "Ch4 Step 7 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 145 ;
+        lv2:symbol "ch4_step_7_tie" ;
+        lv2:name "Ch4 Step 7 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 146 ;
+        lv2:symbol "ch4_step_8_on" ;
+        lv2:name "Ch4 Step 8 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 147 ;
+        lv2:symbol "ch4_step_8_tie" ;
+        lv2:name "Ch4 Step 8 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 148 ;
+        lv2:symbol "ch4_step_9_on" ;
+        lv2:name "Ch4 Step 9 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 149 ;
+        lv2:symbol "ch4_step_9_tie" ;
+        lv2:name "Ch4 Step 9 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 150 ;
+        lv2:symbol "ch4_step_10_on" ;
+        lv2:name "Ch4 Step 10 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 151 ;
+        lv2:symbol "ch4_step_10_tie" ;
+        lv2:name "Ch4 Step 10 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 152 ;
+        lv2:symbol "ch4_step_11_on" ;
+        lv2:name "Ch4 Step 11 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 153 ;
+        lv2:symbol "ch4_step_11_tie" ;
+        lv2:name "Ch4 Step 11 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 154 ;
+        lv2:symbol "ch4_step_12_on" ;
+        lv2:name "Ch4 Step 12 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 155 ;
+        lv2:symbol "ch4_step_12_tie" ;
+        lv2:name "Ch4 Step 12 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 156 ;
+        lv2:symbol "ch4_step_13_on" ;
+        lv2:name "Ch4 Step 13 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 157 ;
+        lv2:symbol "ch4_step_13_tie" ;
+        lv2:name "Ch4 Step 13 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 158 ;
+        lv2:symbol "ch4_step_14_on" ;
+        lv2:name "Ch4 Step 14 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 159 ;
+        lv2:symbol "ch4_step_14_tie" ;
+        lv2:name "Ch4 Step 14 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 160 ;
+        lv2:symbol "ch4_step_15_on" ;
+        lv2:name "Ch4 Step 15 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 161 ;
+        lv2:symbol "ch4_step_15_tie" ;
+        lv2:name "Ch4 Step 15 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 162 ;
+        lv2:symbol "ch4_step_16_on" ;
+        lv2:name "Ch4 Step 16 On" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 163 ;
+        lv2:symbol "ch4_step_16_tie" ;
+        lv2:name "Ch4 Step 16 Tie" ;
+        lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+    ] ;
+
+    modgui:gui [
+        a modgui:Gui ;
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate    <modgui/icon-parkinsound-stepgate4.html> ;
+        modgui:stylesheet      <modgui/stylesheet-parkinsound-stepgate4.css> ;
+        modgui:javascript      <modgui/javascript-parkinsound-stepgate4.js> ;
+        modgui:screenshot      <modgui/screenshot-parkinsound-stepgate4.png> ;
+        modgui:thumbnail       <modgui/thumbnail-parkinsound-stepgate4.png> ;
+        modgui:brand           "Parkinsound" ;
+        modgui:label           "Step Gate 4" ;
+        modgui:model           "" ;
+        modgui:panel           "" ;
+        modgui:color           "white" ;
+        modgui:knob            "" ;
+        modgui:monitoredOutputs [ lv2:symbol "ch1_current_step" ] ,
+        [ lv2:symbol "ch2_current_step" ] ,
+        [ lv2:symbol "ch3_current_step" ] ,
+        [ lv2:symbol "ch4_current_step" ]
+    ] .

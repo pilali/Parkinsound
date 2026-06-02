@@ -1,0 +1,18 @@
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix pset: <http://lv2plug.in/ns/ext/presets#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://github.com/pilali/parkinsound/lv2/stepgate4>
+    a lv2:Plugin ;
+    lv2:binary <stepgate4.so> ;
+    rdfs:seeAlso <stepgate4.ttl> .
+
+<Off.ttl>
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate4> ;
+    a pset:Preset ;
+    rdfs:seeAlso <Off.ttl> .
+
+<Polyrhythm.ttl>
+    lv2:appliesTo <https://github.com/pilali/parkinsound/lv2/stepgate4> ;
+    a pset:Preset ;
+    rdfs:seeAlso <Polyrhythm.ttl> .

@@ -1,0 +1,17 @@
+config BR2_PACKAGE_PARKINSOUND_STEPGATE4
+	bool "parkinsound-stepgate4"
+	help
+	  Parkinsound Step Gate 4 - a 4-channel 16-step audio gate
+	  sequencer LV2 plugin for MOD devices.
+
+	  Four independent mono voices share a single plug-in instance so
+	  their step clocks are locked together sample-for-sample. The
+	  Sync Source (Host Sync / Free Run) and Tempo are common to all
+	  four channels, while each channel has its own rhythmic Division,
+	  16 step On/Tie toggles and ADSR envelope. Because every voice is
+	  advanced from one shared master beat, the four sequences trigger
+	  simultaneously and never drift apart - solving the cross-plugin
+	  synchronisation weakness of running several separate gate plugins
+	  under mod-host / mod-ui.
+
+	  https://github.com/pilali/Parkinsound
