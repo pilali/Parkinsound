@@ -180,6 +180,17 @@
     pointer-events: none;
     user-select: none;
 }
+/* Feel selector (straight '-' / dotted 'D' / triplet 'T'). */
+.parkinsound-stepgate4-pedal .mod-value {
+    fill: #777;
+    font-size: 10px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+}
+.parkinsound-stepgate4-pedal .mod-value.active { fill: #fff; }
 
 /* --- Separator above the ADSR section --- */
 .parkinsound-stepgate4-pedal .adsr-sep {

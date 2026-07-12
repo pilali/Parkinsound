@@ -33,6 +33,12 @@ StepGateAudioProcessor::createLayout()
         ParameterID { "division", kVersionHint }, "Division",
         StringArray { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32" }, 4));
 
+    // Division feel: straight (x1), dotted (x1.5), triplet (x2/3).
+    // Matches the div_mod LV2 port appended in the .ttl.
+    layout.add(std::make_unique<AudioParameterChoice>(
+        ParameterID { "div_mod", kVersionHint }, "Division Feel",
+        StringArray { "Straight", "Dotted", "Triplet" }, 0));
+
     // 16 step on/tie toggles. Step 1 on by default; all ties on by default.
     for (int s = 1; s <= STEPGATE_NUM_STEPS; ++s)
     {
@@ -79,6 +85,7 @@ void StepGateAudioProcessor::cacheParameterPointers()
     pSync    = apvts.getRawParameterValue("sync_source");
     pTempo   = apvts.getRawParameterValue("tempo");
     pDiv     = apvts.getRawParameterValue("division");
+    pDivMod  = apvts.getRawParameterValue("div_mod");
     pEnabled = apvts.getRawParameterValue("enabled");
     pAttack  = apvts.getRawParameterValue("attack");
     pDecay   = apvts.getRawParameterValue("decay");
@@ -147,6 +154,7 @@ void StepGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     p.sync_source = pSync->load();
     p.tempo       = pTempo->load();
     p.division    = pDiv->load();
+    p.division_mod = pDivMod->load();
     p.enabled     = pEnabled->load();
     p.attack      = pAttack->load();
     p.decay       = pDecay->load();

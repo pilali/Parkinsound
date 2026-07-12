@@ -18,6 +18,9 @@ The plug-in exposes 164 ports laid out exactly as the C source expects:
         +4  chN_sustain
         +5  chN_release
         +6.. chN_step_M_on / chN_step_M_tie  (M = 1..16)
+    164..167  ch1_div_mod..ch4_div_mod (appended in v1.2; LV2 forbids
+              renumbering existing ports, so later additions always go
+              after the last historical index, never inside the blocks)
 
 Keeping the .ttl machine-generated guarantees it stays consistent with
 the computable port layout in stepgate4.c. Run from the bundle dir:
@@ -33,6 +36,10 @@ PROJECT_URI = "https://github.com/pilali/parkinsound"
 DIV_SCALE = [
     ("1/1", 0), ("1/2", 1), ("1/4", 2),
     ("1/8", 3), ("1/16", 4), ("1/32", 5),
+]
+
+DIV_MOD_SCALE = [
+    ("Straight", 0), ("Dotted", 1), ("Triplet", 2),
 ]
 
 ports = []  # each entry is a list of TTL lines (without the leading "[" / trailing "]")
@@ -146,6 +153,15 @@ for ch in range(NUM_CHANNELS):
             1, 0, 1, props=["lv2:toggled", "lv2:integer"],
         ))
 
+# ---- appended ports (v1.2): per-channel division feel modifier ----------
+DIV_MOD_BASE = CH_BASE + NUM_CHANNELS * CH_STRIDE  # 164
+for ch in range(NUM_CHANNELS):
+    n = ch + 1
+    add(control_in(
+        DIV_MOD_BASE + ch, f"ch{n}_div_mod", f"Ch{n} Division Feel", 0, 0, 2,
+        props=["lv2:enumeration", "lv2:integer"], scale=DIV_MOD_SCALE,
+    ))
+
 
 def render():
     header = """@prefix doap:   <http://usefulinc.com/ns/doap#> .
@@ -168,7 +184,7 @@ def render():
     doap:name "Parkinsound Step Gate 4" ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:project <%(project)s> ;
-    lv2:minorVersion 1 ;
+    lv2:minorVersion 2 ;
     lv2:microVersion 0 ;
     lv2:requiredFeature urid:map ;
     lv2:optionalFeature lv2:hardRTCapable ;

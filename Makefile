@@ -29,9 +29,11 @@ PRESETS = \
 	Sixteenth_Chop.ttl
 
 # ---- 4-channel bundle -----------------------------------------------
+# Also a thin wrapper over the shared core since the multi-voice
+# refactor (stepgate_dsp_process_multi).
 BUNDLE4  = parkinsound-stepgate4.lv2
 TARGET4  = $(BUNDLE4)/stepgate4.so
-SOURCES4 = $(BUNDLE4)/stepgate4.c
+SOURCES4 = $(BUNDLE4)/stepgate4.c src/stepgate_dsp.c
 
 PRESETS4 = \
 	Off.ttl \
@@ -63,7 +65,7 @@ stepgate4: $(TARGET4)
 $(TARGET): $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) $(LDFLAGS) -lm
 
-$(TARGET4): $(SOURCES4)
+$(TARGET4): $(SOURCES4) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES4) $(LDFLAGS) -lm
 
 clean:

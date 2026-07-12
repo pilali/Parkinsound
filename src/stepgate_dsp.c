@@ -32,16 +32,44 @@ struct StepGateDsp {
     double prev_received_beat;
     int    has_prev_beat;
 
-    /* Free-run state. */
+    /* Free-run state (single-voice path). */
     double free_phase;
     int    free_step;
+
+    /* Free-run master beat counter (multi-voice path, shared by all
+     * voices so their mutual phase relationship is preserved). */
+    double free_beat;
 
     /* lv2:enabled transition detection. */
     int    prev_enabled;
 
     /* Gate smoothing. */
-    float  gate;
+    float  gate;                            /* single-voice path  */
+    float  gates[STEPGATE_MAX_VOICES];      /* multi-voice path   */
 };
+
+/* division index -> step length expressed in quarter notes
+ * 0 = 1/1 whole       = 4 quarters
+ * 1 = 1/2 half        = 2 quarters
+ * 2 = 1/4 quarter     = 1 quarter
+ * 3 = 1/8 eighth      = 0.5
+ * 4 = 1/16 sixteenth  = 0.25
+ * 5 = 1/32            = 0.125
+ * The modifier then scales the step length:
+ * 0 = straight (x1), 1 = dotted (x1.5), 2 = triplet (x2/3). */
+static inline double
+step_length_in_beats(float division, float division_mod)
+{
+    static const double div_factor[6] = { 4.0, 2.0, 1.0, 0.5, 0.25, 0.125 };
+    static const double mod_factor[3] = { 1.0, 1.5, 2.0 / 3.0 };
+    int div = (int)lroundf(division);
+    if (div < 0) div = 0;
+    if (div > 5) div = 5;
+    int mod = (int)lroundf(division_mod);
+    if (mod < 0) mod = 0;
+    if (mod > 2) mod = 2;
+    return div_factor[div] * mod_factor[mod];
+}
 
 /* Per-step ADSR envelope, all times expressed as fractions of the step
  * duration. tied_in suppresses Attack and Decay (the note is the
@@ -94,8 +122,10 @@ stepgate_dsp_new(double sample_rate)
     self->has_prev_beat       = 0;
     self->free_phase          = 0.0;
     self->free_step           = 0;
+    self->free_beat           = 0.0;
     self->prev_enabled        = 1;
     self->gate                = 0.0f;
+    for (int v = 0; v < STEPGATE_MAX_VOICES; ++v) self->gates[v] = 0.0f;
 
     return self;
 }
@@ -111,8 +141,10 @@ stepgate_dsp_reset(StepGateDsp* self)
 {
     self->free_phase   = 0.0;
     self->free_step    = 0;
+    self->free_beat    = 0.0;
     self->prev_enabled = 1;
     self->gate         = 0.0f;
+    for (int v = 0; v < STEPGATE_MAX_VOICES; ++v) self->gates[v] = 0.0f;
 }
 
 void
@@ -177,18 +209,8 @@ stepgate_dsp_process(StepGateDsp* self, const StepGateParams* params,
     if (bpm < 20.0)  bpm = 20.0;
     if (bpm > 999.0) bpm = 999.0;
 
-    /* division index -> step length expressed in quarter notes
-     * 0 = 1/1 whole       = 4 quarters
-     * 1 = 1/2 half        = 2 quarters
-     * 2 = 1/4 quarter     = 1 quarter
-     * 3 = 1/8 eighth      = 0.5
-     * 4 = 1/16 sixteenth  = 0.25
-     * 5 = 1/32            = 0.125 */
-    static const double div_factor[6] = { 4.0, 2.0, 1.0, 0.5, 0.25, 0.125 };
-    int div = (int)lroundf(params->division);
-    if (div < 0) div = 0;
-    if (div > 5) div = 5;
-    const double step_in_beats = div_factor[div];
+    const double step_in_beats =
+        step_length_in_beats(params->division, params->division_mod);
 
     const double beat_inc = bpm / (60.0 * self->sample_rate);
 
@@ -281,4 +303,126 @@ stepgate_dsp_process(StepGateDsp* self, const StepGateParams* params,
     }
 
     return display_step + 1;
+}
+
+void
+stepgate_dsp_process_multi(StepGateDsp* self,
+                           const StepGateSharedParams* shared,
+                           const StepGateVoiceParams* voices,
+                           int num_voices,
+                           const float* const* ins,
+                           float* const* outs,
+                           int* current_steps,
+                           uint32_t n_samples)
+{
+    if (num_voices > STEPGATE_MAX_VOICES) num_voices = STEPGATE_MAX_VOICES;
+    if (num_voices < 0)                   num_voices = 0;
+
+    const int   sync       = (int)lroundf(shared->sync_source);
+    const float tempo_ctrl = shared->tempo;
+    const int   host_sync  = (sync == 0);
+    const int   enabled    = (shared->enabled > 0.5f);
+
+    double bpm;
+    if (host_sync && self->host_bpm > 0.0) {
+        bpm = self->host_bpm;
+    } else {
+        bpm = (double)tempo_ctrl;
+    }
+    if (bpm < 20.0)  bpm = 20.0;
+    if (bpm > 999.0) bpm = 999.0;
+
+    const double beat_inc = bpm / (60.0 * self->sample_rate);
+
+    /* Free-run only: reset the shared master beat to step 1 when
+     * lv2:enabled goes 0 -> 1. All voices reset together, preserving
+     * their mutual phase relationship. */
+    if (!host_sync && enabled && !self->prev_enabled) {
+        self->free_beat = 0.0;
+    }
+    self->prev_enabled = enabled;
+
+    /* ~3 ms one-pole smoothing to avoid clicks on gate transitions. */
+    const float gate_alpha = 1.0f - expf(-1.0f / (float)(0.003 * self->sample_rate));
+
+    /* Snapshot the per-voice controls once per block. Control values are
+     * stable across one process call, so tie boundaries can be resolved
+     * by looking at neighbouring steps without re-reading every sample. */
+    double step_in_beats[STEPGATE_MAX_VOICES];
+    int    son [STEPGATE_MAX_VOICES][NUM_STEPS];
+    int    stie[STEPGATE_MAX_VOICES][NUM_STEPS];
+    for (int v = 0; v < num_voices; ++v) {
+        step_in_beats[v] =
+            step_length_in_beats(voices[v].division, voices[v].division_mod);
+        for (int k = 0; k < NUM_STEPS; ++k) {
+            son [v][k] = (voices[v].step_on[k]  > 0.5f);
+            stie[v][k] = (voices[v].step_tie[k] > 0.5f);
+        }
+    }
+
+    int display_step[STEPGATE_MAX_VOICES];
+    for (int v = 0; v < num_voices; ++v) display_step[v] = 0;
+
+    for (uint32_t i = 0; i < n_samples; ++i) {
+        /* The single master beat shared by every voice. Sampling it
+         * BEFORE advancing means master beat 0 lands exactly on step 1
+         * / phase 0 for all voices, so the sequences trigger together. */
+        double master;
+        if (host_sync) {
+            master = self->host_beat;
+        } else if (enabled) {
+            master = self->free_beat;
+        } else {
+            master = 0.0;
+        }
+
+        for (int v = 0; v < num_voices; ++v) {
+            float target;
+            int   step = 0;
+
+            if (!enabled) {
+                /* lv2:enabled = 0 -> transparent pass-through. */
+                target = 1.0f;
+            } else {
+                const double seq_pos   = master / step_in_beats[v];
+                const double seq_floor = floor(seq_pos);
+                long   step_index      = (long)seq_floor;
+                double in_step_phase   = seq_pos - seq_floor;
+                long   mod_step        = step_index % NUM_STEPS;
+                if (mod_step < 0) mod_step += NUM_STEPS;
+                step = (int)mod_step;
+
+                const int on        = son[v][step];
+                const int prev_step = (step + NUM_STEPS - 1) % NUM_STEPS;
+                const int next_step = (step + 1) % NUM_STEPS;
+                const int tied_in   = on && stie[v][step] && son[v][prev_step];
+                const int tied_out  = on && son[v][next_step] && stie[v][next_step];
+                if (!on) target = 0.0f;
+                else     target = step_env(in_step_phase,
+                                           voices[v].attack, voices[v].decay,
+                                           voices[v].sustain, voices[v].release,
+                                           tied_in, tied_out);
+            }
+
+            self->gates[v] += (target - self->gates[v]) * gate_alpha;
+
+            const float s = ins && ins[v] ? ins[v][i] : 0.0f;
+            if (outs && outs[v]) outs[v][i] = s * self->gates[v];
+
+            display_step[v] = step;
+        }
+
+        /* Advance the shared counters once per sample, after all voices
+         * have been processed from the same master value. host_beat
+         * keeps cycling even while disabled / paused (mod-host has no
+         * JACK transport), matching the single-voice path. */
+        self->host_beat += beat_inc;
+        if (enabled) self->free_beat += beat_inc;
+    }
+
+    if (current_steps) {
+        for (int v = 0; v < num_voices; ++v) {
+            current_steps[v] = display_step[v] + 1;
+        }
+    }
 }

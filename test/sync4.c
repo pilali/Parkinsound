@@ -14,6 +14,11 @@
  *      voice fires on every other 1/16 boundary, on the very same
  *      sample, demonstrating that the trigger origin is common.
  *
+ *   C. A straight 1/4 voice against a triplet 1/4 voice (div_mod = 2):
+ *      the triplet runs exactly 3 steps for every 2 straight steps, and
+ *      the two voices re-align on the very same sample at every common
+ *      boundary (integer multiples of 2 beats).
+ *
  * Build:
  *   gcc -O2 -Wall -o test/sync4 test/sync4.c -ldl -lm
  * Run:
@@ -32,7 +37,7 @@
 #define SR     48000.0
 #define BLOCK  256
 #define SECS   4
-#define NPORTS 164
+#define NPORTS 168
 #define NCH    4
 #define NSTEPS 16
 
@@ -45,6 +50,7 @@
 #define P_OUT_BASE    8
 #define P_CH_BASE     12
 #define CH_STRIDE     38
+#define P_DIVMOD_BASE 164     /* ch1..ch4 div_mod, appended in v1.2 */
 #define CH_DIVISION   0
 #define CH_CURRENT    1
 #define CH_ATTACK     2
@@ -225,6 +231,78 @@ main(void)
         printf("        ch0(1/8) boundaries=%ld, ch1(1/16) boundaries=%ld, aligned=%ld, unaligned=%ld\n",
                bound0, bound1, aligned, unaligned);
         if (unaligned != 0 || bound0 == 0) rc = 1;
+    }
+
+    /* ============================ Test C ============================ */
+    /* ch0 = straight 1/4, ch1 = triplet 1/4 (div_mod = 2). Over the run
+     * the triplet voice must produce exactly 3 boundaries for every 2
+     * straight boundaries, and the voices must re-align on the very
+     * same sample at every 2-beat mark (their common period). */
+    {
+        for (int i = 0; i < NPORTS; ++i) ports[i] = 0.0f;
+        ports[P_SYNC]    = 1.0f;
+        ports[P_TEMPO]   = 120.0f;
+        ports[P_ENABLED] = 1.0f;
+        for (int c = 0; c < 2; ++c) {
+            ports[ch_port(c, CH_DIVISION)] = 2.0f;  /* 1/4 */
+            ports[ch_port(c, CH_SUSTAIN)]  = 1.0f;
+            ports[ch_port(c, CH_RELEASE)]  = 0.5f;
+            for (int m = 0; m < NSTEPS; ++m) {
+                ports[ch_step_on(c, m)]  = 1.0f;
+                ports[ch_step_tie(c, m)] = 0.0f;
+            }
+        }
+        ports[P_DIVMOD_BASE + 0] = 0.0f;  /* ch1: straight */
+        ports[P_DIVMOD_BASE + 1] = 2.0f;  /* ch2: triplet  */
+
+        float cur[NCH];
+
+        LV2_Handle inst = d->instantiate(d, SR, ".", features);
+        d->connect_port(inst, P_TIME_IN, &seq);
+        for (int c = 0; c < NCH; ++c) {
+            d->connect_port(inst, P_IN_BASE  + c, in[c]);
+            d->connect_port(inst, P_OUT_BASE + c, out[c]);
+            d->connect_port(inst, (uint32_t)ch_port(c, CH_CURRENT), &cur[c]);
+        }
+        for (int p = 0; p < NPORTS; ++p) {
+            int is_audio = (p >= P_IN_BASE && p < P_IN_BASE + 2 * NCH);
+            int is_cur = 0;
+            for (int c = 0; c < NCH; ++c) if (p == ch_port(c, CH_CURRENT)) is_cur = 1;
+            if (p == P_TIME_IN || is_audio || is_cur) continue;
+            d->connect_port(inst, (uint32_t)p, &ports[p]);
+        }
+        d->activate(inst);
+
+        long total = (long)(SR * SECS);
+        int prev_step[NCH];
+        for (int c = 0; c < NCH; ++c) prev_step[c] = -1;
+        long bound0 = 0, bound1 = 0, aligned = 0;
+
+        for (long n = 0; n < total; ++n) {
+            d->run(inst, 1);
+            int boundary[2];
+            for (int c = 0; c < 2; ++c) {
+                int s = (int)cur[c];
+                boundary[c] = (prev_step[c] != -1 && s != prev_step[c]);
+                prev_step[c] = s;
+            }
+            if (boundary[0]) ++bound0;
+            if (boundary[1]) ++bound1;
+            if (boundary[0] && boundary[1]) ++aligned;
+        }
+        d->deactivate(inst);
+        d->cleanup(inst);
+
+        /* 4 s at 120 BPM = 8 beats -> ~8 straight, ~12 triplet
+         * boundaries, re-alignment at beats 2,4,6,8 -> ~4 shared
+         * samples. Allow +-1 boundary for block/start rounding. */
+        long ratio_err   = labs(2 * bound1 - 3 * bound0);
+        int  pass = (bound0 > 0) && (ratio_err <= 3) && (aligned >= 3);
+        printf("Test C (1/4 straight vs 1/4 triplet, 3:2 lock): %s\n",
+               pass ? "PASS" : "FAIL");
+        printf("        straight boundaries=%ld, triplet boundaries=%ld, same-sample re-alignments=%ld\n",
+               bound0, bound1, aligned);
+        if (!pass) rc = 1;
     }
 
     dlclose(h);

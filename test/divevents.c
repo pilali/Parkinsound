@@ -167,12 +167,12 @@ main(void)
         ports[9  + s * 2] = 1.0f;  /* all steps on */
         ports[10 + s * 2] = 0.0f;  /* tie=0 -> 2 transitions per step */
     }
-    ports[41] = 1.0f;  /* enabled */
-    ports[42] = 1.0f;  /* depth */
-    ports[43] = 0.0f;  /* attack */
-    ports[44] = 0.0f;  /* decay */
-    ports[45] = 1.0f;  /* sustain */
-    ports[46] = 0.5f;  /* release */
+    ports[41] = 1.0f;   /* enabled */
+    ports[42] = 0.0f;   /* attack */
+    ports[43] = 0.0f;   /* decay */
+    ports[44] = 1.0f;   /* sustain */
+    ports[45] = 0.5f;   /* release -> approximates the legacy 50% gate */
+    ports[46] = 0.0f;   /* div_mod = straight */
 
     static const char* names[6] = { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32" };
 

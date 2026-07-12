@@ -76,13 +76,20 @@ StepGateEditor::StepGateEditor(StepGateAudioProcessor& p)
     tempoSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     addAndMakeVisible(tempoSlider);
 
+    auto styleBox = [this](juce::ComboBox& b)
+    {
+        b.setColour(juce::ComboBox::backgroundColourId, grey(0x1a));
+        b.setColour(juce::ComboBox::textColourId, juce::Colours::white);
+        b.setColour(juce::ComboBox::outlineColourId, grey(0x44));
+        b.setColour(juce::ComboBox::arrowColourId, grey(0xbb));
+        addAndMakeVisible(b);
+    };
     for (int i = 0; i < 6; ++i)
         divisionBox.addItem(juce::StringArray { "1/1","1/2","1/4","1/8","1/16","1/32" }[i], i + 1);
-    divisionBox.setColour(juce::ComboBox::backgroundColourId, grey(0x1a));
-    divisionBox.setColour(juce::ComboBox::textColourId, juce::Colours::white);
-    divisionBox.setColour(juce::ComboBox::outlineColourId, grey(0x44));
-    divisionBox.setColour(juce::ComboBox::arrowColourId, grey(0xbb));
-    addAndMakeVisible(divisionBox);
+    styleBox(divisionBox);
+    for (int i = 0; i < 3; ++i)
+        divModBox.addItem(juce::StringArray { "Straight","Dotted","Triplet" }[i], i + 1);
+    styleBox(divModBox);
 
     auto styleLabel = [this](juce::Label& l, const juce::String& t)
     {
@@ -99,6 +106,8 @@ StepGateEditor::StepGateEditor(StepGateAudioProcessor& p)
         apvts, "tempo", tempoSlider);
     divisionAtt = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         apvts, "division", divisionBox);
+    divModAtt   = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        apvts, "div_mod", divModBox);
 
     setResizable(false, false);
     setSize((int) (kVW * 1.4f), (int) (kVH * 1.4f));
@@ -246,7 +255,8 @@ void StepGateEditor::resized()
     tempoLabel.setBounds(vx(12), vx(kPedalH + 10), vx(46), rowH);
     tempoSlider.setBounds(vx(58), vx(kPedalH + 10), vx(180), rowH);
     divisionLabel.setBounds(vx(12), vx(kPedalH + 44), vx(46), rowH);
-    divisionBox.setBounds(vx(58), vx(kPedalH + 44), vx(120), rowH);
+    divisionBox.setBounds(vx(58), vx(kPedalH + 44), vx(72), rowH);
+    divModBox.setBounds(vx(136), vx(kPedalH + 44), vx(102), rowH);
 }
 
 //==============================================================================

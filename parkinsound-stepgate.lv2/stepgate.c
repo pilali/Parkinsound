@@ -60,7 +60,10 @@ typedef enum {
 #define PORT_DECAY   (PORT_ATTACK  + 1)
 #define PORT_SUSTAIN (PORT_DECAY   + 1)
 #define PORT_RELEASE (PORT_SUSTAIN + 1)
-#define NUM_PORTS    (PORT_RELEASE + 1)
+/* Appended after the original layout (LV2 forbids renumbering existing
+ * ports without a new plugin URI). */
+#define PORT_DIV_MOD (PORT_RELEASE + 1)
+#define NUM_PORTS    (PORT_DIV_MOD + 1)
 
 typedef struct {
     LV2_URID atom_Blank;
@@ -98,6 +101,7 @@ typedef struct {
     const float* decay_port;
     const float* sustain_port;
     const float* release_port;
+    const float* div_mod_port;
 } StepGate;
 
 static inline double
@@ -198,6 +202,7 @@ connect_port(LV2_Handle instance, uint32_t port, void* data)
             else if (port == PORT_DECAY)   self->decay_port   = (const float*)data;
             else if (port == PORT_SUSTAIN) self->sustain_port = (const float*)data;
             else if (port == PORT_RELEASE) self->release_port = (const float*)data;
+            else if (port == PORT_DIV_MOD) self->div_mod_port = (const float*)data;
             else if (port >= PORT_STEP_BASE && port < PORT_STEP_BASE + NUM_STEPS * 2u) {
                 uint32_t local = port - PORT_STEP_BASE;
                 uint32_t step  = local / 2u;
@@ -238,6 +243,7 @@ run(LV2_Handle instance, uint32_t n_samples)
     p.sync_source = self->sync_source ? *self->sync_source : 0.0f;
     p.tempo       = self->tempo       ? *self->tempo       : 120.0f;
     p.division    = self->division    ? *self->division    : 4.0f;
+    p.division_mod = self->div_mod_port ? *self->div_mod_port : 0.0f;
     p.enabled     = self->enabled_port ? *self->enabled_port : 1.0f;
     p.attack      = self->attack_port  ? *self->attack_port  : 0.0f;
     p.decay       = self->decay_port   ? *self->decay_port   : 0.0f;

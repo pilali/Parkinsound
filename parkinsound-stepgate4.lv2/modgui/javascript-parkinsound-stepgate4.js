@@ -12,6 +12,8 @@
  *   Four channel lines, each:
  *     - 16 tie buttons on top of 16 step buttons
  *     - left gutter: "CHn" label + division selector (click cycles)
+ *       + feel selector (click cycles straight '-' / dotted 'D' /
+ *       triplet 'T', port chN_div_mod)
  *   One ADSR line below: the four voices' ADSR curves side by side,
  *     each with three draggable handles.
  *
@@ -33,6 +35,7 @@ function (event, funcs) {
     var A_PX = 24, D_PX = 20, S_PX = 46, R_PX = 20;
 
     var DIV_LABELS = ['1/1', '1/2', '1/4', '1/8', '1/16', '1/32'];
+    var MOD_LABELS = ['-', 'D', 'T'];  /* straight / dotted / triplet */
 
     /* ---- Geometry helpers -------------------------------------------- */
     function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -64,12 +67,13 @@ function (event, funcs) {
 
     /* ---- Per-icon state ---------------------------------------------- */
     function defaultState() {
-        var adsr = [], divs = [];
+        var adsr = [], divs = [], mods = [];
         for (var c = 0; c < NCH; c++) {
             adsr.push({ attack: 0.0, decay: 0.0, sustain: 1.0, release: 0.5 });
             divs.push(4); /* 1/16 default */
+            mods.push(0); /* straight default */
         }
-        return { adsr: adsr, div: divs, tempo: 120 };
+        return { adsr: adsr, div: divs, mod: mods, tempo: 120 };
     }
 
     /* ---- ADSR geometry ----------------------------------------------- */
@@ -126,6 +130,16 @@ function (event, funcs) {
         iconEl._pg.div[ch] = idx;
         var l = iconEl.querySelector('.div-value[data-ch="' + ch + '"]');
         if (l) l.textContent = DIV_LABELS[idx];
+    }
+
+    function applyDivMod(iconEl, ch, idx) {
+        idx = clamp(Math.round(idx), 0, 2);
+        iconEl._pg.mod[ch] = idx;
+        var l = iconEl.querySelector('.mod-value[data-ch="' + ch + '"]');
+        if (l) {
+            l.textContent = MOD_LABELS[idx];
+            l.classList.toggle('active', idx !== 0);
+        }
     }
 
     function applyStepValue(iconEl, symbol, value) {
@@ -279,13 +293,17 @@ function (event, funcs) {
         for (var ch = 0; ch < NCH; ch++) {
             var n = ch + 1;
 
-            /* gutter: channel label + division selector */
+            /* gutter: channel label + division selector + feel selector */
             g.appendChild(makeText(8, tieY(ch) + 14, 'CH' + n, 'ch-label'));
-            var dBox = makeEl('rect', { x: 8, y: tieY(ch) + 20, width: 64, height: 17, rx: 3, 'class': 'div-box', 'data-ch': ch });
+            var dBox = makeEl('rect', { x: 8, y: tieY(ch) + 20, width: 62, height: 17, rx: 3, 'class': 'div-box', 'data-ch': ch });
             g.appendChild(dBox);
-            var dVal = makeText(40, tieY(ch) + 29, DIV_LABELS[4], 'div-value'); dVal.setAttribute('data-ch', ch);
+            var dVal = makeText(39, tieY(ch) + 29, DIV_LABELS[4], 'div-value'); dVal.setAttribute('data-ch', ch);
             g.appendChild(dVal);
-            (function (cch, box) {
+            var mBox = makeEl('rect', { x: 73, y: tieY(ch) + 20, width: 16, height: 17, rx: 3, 'class': 'div-box mod-box', 'data-ch': ch });
+            g.appendChild(mBox);
+            var mVal = makeText(81, tieY(ch) + 29, MOD_LABELS[0], 'mod-value'); mVal.setAttribute('data-ch', ch);
+            g.appendChild(mVal);
+            (function (cch, box, modBox) {
                 function cycle(e) {
                     var next = (iconEl._pg.div[cch] + 1) % 6;
                     applyDivision(iconEl, cch, next);
@@ -293,10 +311,20 @@ function (event, funcs) {
                     e.stopPropagation();
                     e.preventDefault();
                 }
+                function cycleMod(e) {
+                    var next = (iconEl._pg.mod[cch] + 1) % 3;
+                    applyDivMod(iconEl, cch, next);
+                    if (funcs) funcs.set_port_value('ch' + (cch + 1) + '_div_mod', next);
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
                 box.addEventListener('mousedown', stopMouseDown);
                 box.addEventListener('touchstart', stopMouseDown);
                 box.addEventListener('click', cycle);
-            })(ch, dBox);
+                modBox.addEventListener('mousedown', stopMouseDown);
+                modBox.addEventListener('touchstart', stopMouseDown);
+                modBox.addEventListener('click', cycleMod);
+            })(ch, dBox, mBox);
 
             for (var s = 0; s < NSTEPS; s++) {
                 var x = stepX(s);
@@ -394,6 +422,9 @@ function (event, funcs) {
         var m;
         if ((m = sym.match(/^ch(\d)_division$/))) {
             applyDivision(iconEl, parseInt(m[1], 10) - 1, parseFloat(value)); return;
+        }
+        if ((m = sym.match(/^ch(\d)_div_mod$/))) {
+            applyDivMod(iconEl, parseInt(m[1], 10) - 1, parseFloat(value)); return;
         }
         if ((m = sym.match(/^ch(\d)_current_step$/))) {
             highlightStep(iconEl, parseInt(m[1], 10) - 1, parseInt(value, 10)); return;

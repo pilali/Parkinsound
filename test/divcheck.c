@@ -6,7 +6,8 @@
  * gate transition), feeds a constant DC signal, and counts how often
  * the gate crosses 0.5 per second for every division setting. The
  * expected ratio between adjacent divisions is exactly 2x, and 32x
- * between 1/1 and 1/32.
+ * between 1/1 and 1/32. The div_mod feel modifier is also checked:
+ * dotted divides the step rate by 1.5, triplet multiplies it by 1.5.
  *
  * Build:
  *   gcc -O2 -Wall -o test/divcheck test/divcheck.c -ldl -lm
@@ -84,29 +85,40 @@ main(void)
         ports[10 + s * 2] = 0.0f; /* step_N_tie */
     }
     ports[41] = 1.0f; /* enabled */
-    ports[42] = 1.0f; /* depth   = full effect */
-    ports[43] = 0.0f; /* attack  = instant */
-    ports[44] = 0.0f; /* decay   = instant */
-    ports[45] = 1.0f; /* sustain = full */
-    ports[46] = 0.5f; /* release = half-step -> mimics half-on/half-off */
+    ports[42] = 0.0f; /* attack  = instant */
+    ports[43] = 0.0f; /* decay   = instant */
+    ports[44] = 1.0f; /* sustain = full */
+    ports[45] = 0.5f; /* release = half-step -> mimics half-on/half-off */
+    ports[46] = 0.0f; /* div_mod, set per run */
 
     printf("Division | gate transitions per second (expected)\n");
     printf("---------+----------------------------------------\n");
-    static const char* names[6]   = { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32" };
-    static const double expected[6] = {
-        /* steps/sec at 120 BPM = (bpm/60) / div_factor; each step has one
-         * 1->0 and one 0->1 transition with tie=0 -> 2 transitions/step.
-         * For 1/16: (120/60)/0.25 = 8 steps/sec -> 16 transitions/sec. */
-        2.0 * 0.5,   /* 1/1   : 0.5 step/s ->  1 transition/s */
-        2.0 * 1.0,   /* 1/2   : 1   step/s ->  2 transition/s */
-        2.0 * 2.0,   /* 1/4   : 2   step/s ->  4 transition/s */
-        2.0 * 4.0,   /* 1/8   : 4   step/s ->  8 transition/s */
-        2.0 * 8.0,   /* 1/16  : 8   step/s -> 16 transition/s */
-        2.0 * 16.0,  /* 1/32  : 16  step/s -> 32 transition/s */
+    static const char* names[6] = { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32" };
+    /* Step length in quarter notes per division index. */
+    static const double div_factor[6] = { 4.0, 2.0, 1.0, 0.5, 0.25, 0.125 };
+    /* Feel modifier: straight, dotted (x1.5), triplet (x2/3). */
+    static const char* mod_names[3] = { "", " D", " T" };
+    static const double mod_factor[3] = { 1.0, 1.5, 2.0 / 3.0 };
+    /* All 6 straight divisions, plus dotted/triplet spot checks. */
+    static const int cases[][2] = {
+        { 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 }, { 4, 0 }, { 5, 0 },
+        { 3, 1 }, { 3, 2 }, { 4, 1 }, { 4, 2 },
     };
+    const int ncases = (int)(sizeof(cases) / sizeof(cases[0]));
 
-    for (int div = 0; div < 6; ++div) {
-        ports[7] = (float)div;
+    int rc = 0;
+    for (int c = 0; c < ncases; ++c) {
+        const int div = cases[c][0];
+        const int mod = cases[c][1];
+        ports[7]  = (float)div;
+        ports[46] = (float)mod;
+
+        /* steps/sec at 120 BPM = (bpm/60) / (div_factor * mod_factor);
+         * each step has one 1->0 and one 0->1 transition with tie=0
+         * -> 2 transitions/step. For 1/16: (120/60)/0.25 = 8 steps/sec
+         * -> 16 transitions/sec. */
+        const double expected =
+            2.0 * (120.0 / 60.0) / (div_factor[div] * mod_factor[mod]);
 
         LV2_Handle inst = d->instantiate(d, SR, ".", features);
         d->connect_port(inst, 0, &seq);
@@ -140,10 +152,14 @@ main(void)
         d->cleanup(inst);
 
         double per_sec = (double)transitions / (double)SECS;
-        printf("  %-5s  | %6.2f /s   (expected %.2f /s)\n",
-               names[div], per_sec, expected[div]);
+        int ok = fabs(per_sec - expected) <= expected * 0.05 + 0.5;
+        printf("  %-5s%-2s| %6.2f /s   (expected %.2f /s)  %s\n",
+               names[div], mod_names[mod], per_sec, expected,
+               ok ? "PASS" : "FAIL");
+        if (!ok) rc = 1;
     }
 
     dlclose(h);
-    return 0;
+    printf("\n%s\n", rc == 0 ? "ALL TESTS PASSED" : "SOME TESTS FAILED");
+    return rc;
 }

@@ -61,6 +61,7 @@ private:
     std::atomic<float>* pSync   = nullptr;
     std::atomic<float>* pTempo  = nullptr;
     std::atomic<float>* pDiv    = nullptr;
+    std::atomic<float>* pDivMod = nullptr;
     std::atomic<float>* pEnabled = nullptr;
     std::atomic<float>* pAttack  = nullptr;
     std::atomic<float>* pDecay   = nullptr;

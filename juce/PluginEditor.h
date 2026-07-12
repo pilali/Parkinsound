@@ -48,10 +48,11 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
 
     juce::Slider   tempoSlider;
-    juce::ComboBox divisionBox;
+    juce::ComboBox divisionBox, divModBox;
     juce::Label    tempoLabel, divisionLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   tempoAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> divisionAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> divModAtt;
 
     Drag drag = Drag::None;
     juce::Point<float> dragStartVirtual;

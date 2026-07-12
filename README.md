@@ -3,7 +3,9 @@
 ![Step Gate UI](parkinsound-stepgate.lv2/modgui/screenshot-parkinsound-stepgate.png)
 
 A 16-step **rhythmic audio gate** sequencer with per-step On/Tie toggles and an
-ADSR envelope, synced to the host transport or free-running.
+ADSR envelope, synced to the host transport or free-running. Divisions run
+from 1/1 to 1/32, each with a straight, **dotted** (x1.5) or **triplet**
+(x2/3) feel (`div_mod`).
 
 - **LV2** — Linux desktop, MOD Audio, Raspberry Pi...
 - **VST3 / AU / Standalone** — macOS (universal) and Windows, via JUCE
@@ -26,7 +28,8 @@ tight polyrhythms (see the `Polyrhythm` factory preset).
 
 - **4 mono in / 4 mono out** (`in_1..in_4`, `out_1..out_4`).
 - **Shared**: Sync Source (Host Sync / Free Run), Tempo, global Enabled (soft bypass).
-- **Per channel**: Division, the 16 On/Tie step toggles, and the ADSR envelope.
+- **Per channel**: Division and its straight/dotted/triplet feel
+  (`chN_div_mod`), the 16 On/Tie step toggles, and the ADSR envelope.
 
 ---
 

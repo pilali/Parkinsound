@@ -275,8 +275,8 @@ non cliquables). Recommandé : grisage, géométrie inchangée.
 
 | Phase | Contenu | Effort estimé |
 |---|---|---|
-| **0** | Rebaser Step Gate 4 sur `src/stepgate_dsp` (dette préalable, sinon tout ×2) | ~1 j |
-| **1** | Volet A complet : `div_mod` cœur + 2 wrappers LV2 + TTL/gen_ttl + JUCE + 2 modguis + tests `divcheck` étendus | 1–2 j |
+| **0** | ✅ *Fait* — Rebaser Step Gate 4 sur `src/stepgate_dsp` (`stepgate_dsp_process_multi`), non-régression vérifiée bit-exacte contre l'ancien binaire | ~1 j |
+| **1** | ✅ *Fait* — Volet A complet : `div_mod` cœur + 2 wrappers LV2 + TTL/gen_ttl + JUCE + modgui SG4 + tests `divcheck`/`sync4` étendus | 1–2 j |
 | **2** | Normalisation `beatUnit` (§3.2) + ingestion `beatsPerBar`/`bar`/`barBeat` (LV2) et `getTimeSignature` (JUCE) dans le cœur | ~1 j |
 | **3** | `pattern_mode` + `active_steps` + alignement mesure dans le DSP ; ports manuels de fallback ; tests (3/4, 6/8, 5/4, 7/4, changement en cours de lecture) | 2–3 j |
 | **4** | Adaptation des UIs : éditeur JUCE, modgui mono (grisage), modgui SG4 (par canal) ; captures modgui régénérées | 2–3 j |

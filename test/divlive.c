@@ -95,11 +95,11 @@ main(void)
         ports[10 + s * 2] = 0.0f;
     }
     ports[41] = 1.0f;   /* enabled */
-    ports[42] = 1.0f;   /* depth */
-    ports[43] = 0.0f;   /* attack */
-    ports[44] = 0.0f;   /* decay */
-    ports[45] = 1.0f;   /* sustain */
-    ports[46] = 0.5f;   /* release */
+    ports[42] = 0.0f;   /* attack */
+    ports[43] = 0.0f;   /* decay */
+    ports[44] = 1.0f;   /* sustain */
+    ports[45] = 0.5f;   /* release -> approximates the legacy 50% gate */
+    ports[46] = 0.0f;   /* div_mod = straight */
 
     /* Pair (start_div, target_div) */
     struct { int from; int to; } pairs[] = {
