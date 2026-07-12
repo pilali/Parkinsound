@@ -54,6 +54,24 @@ StepGateAudioProcessor::createLayout()
     layout.add(std::make_unique<AudioParameterBool>(
         ParameterID { "enabled", kVersionHint }, "Enabled", true));
 
+    // Bar-aligned pattern length. "16 Steps" is the legacy free cycle;
+    // the bar modes derive the pattern length from the meter and pin
+    // step 1 to the bar start.
+    layout.add(std::make_unique<AudioParameterChoice>(
+        ParameterID { "pattern_mode", kVersionHint }, "Pattern Length",
+        StringArray { "16 Steps", "1 Bar", "2 Bars" }, 0));
+
+    // Meter: taken from the host time signature, or set manually
+    // (also the Free Run / standalone fallback).
+    layout.add(std::make_unique<AudioParameterChoice>(
+        ParameterID { "meter_source", kVersionHint }, "Meter Source",
+        StringArray { "Auto (Host)", "Manual" }, 0));
+    layout.add(std::make_unique<AudioParameterInt>(
+        ParameterID { "meter_num", kVersionHint }, "Meter Numerator", 1, 16, 4));
+    layout.add(std::make_unique<AudioParameterChoice>(
+        ParameterID { "meter_denom", kVersionHint }, "Meter Denominator",
+        StringArray { "1", "2", "4", "8", "16" }, 2));
+
     // ADSR, fractions of step length.
     const NormalisableRange<float> unit { 0.0f, 1.0f, 0.0f };
     layout.add(std::make_unique<AudioParameterFloat>(
@@ -86,6 +104,10 @@ void StepGateAudioProcessor::cacheParameterPointers()
     pTempo   = apvts.getRawParameterValue("tempo");
     pDiv     = apvts.getRawParameterValue("division");
     pDivMod  = apvts.getRawParameterValue("div_mod");
+    pPatternMode = apvts.getRawParameterValue("pattern_mode");
+    pMeterSource = apvts.getRawParameterValue("meter_source");
+    pMeterNum    = apvts.getRawParameterValue("meter_num");
+    pMeterDenom  = apvts.getRawParameterValue("meter_denom");
     pEnabled = apvts.getRawParameterValue("enabled");
     pAttack  = apvts.getRawParameterValue("attack");
     pDecay   = apvts.getRawParameterValue("decay");
@@ -131,23 +153,36 @@ void StepGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         return;
 
     // ---- host transport -> core ----
-    bool   haveBpm = false, haveBeat = false;
-    double bpm = 120.0, beat = 0.0;
-    bool   playing = true;
+    // JUCE ppq / bpm are always quarter-note based, so the transport
+    // beat unit is 4 and the time signature is converted to a bar
+    // length in quarters here.
+    StepGatePosition sp;
+    std::memset(&sp, 0, sizeof(sp));
+    sp.have_speed = 1; sp.speed = 1.0;
+    sp.have_beat_unit = 1; sp.beat_unit = 4;
     if (auto* ph = getPlayHead())
     {
         if (auto pos = ph->getPosition())
         {
-            if (auto b = pos->getBpm())          { bpm = *b;  haveBpm  = true; }
-            if (auto q = pos->getPpqPosition())  { beat = *q; haveBeat = true; }
-            playing = pos->getIsPlaying();
+            if (auto b = pos->getBpm())         { sp.have_bpm  = 1; sp.bpm  = *b; }
+            if (auto q = pos->getPpqPosition()) { sp.have_beat = 1; sp.beat = *q; }
+            sp.speed = pos->getIsPlaying() ? 1.0 : 0.0;
+            if (auto ts = pos->getTimeSignature())
+            {
+                sp.have_beats_per_bar = 1;
+                sp.beats_per_bar = (double) ts->numerator * 4.0 / (double) ts->denominator;
+            }
+            if (auto bs = pos->getPpqPositionOfLastBarStart())
+            {
+                sp.have_bar_start = 1; sp.bar_start = *bs;
+            }
+            if (auto bc = pos->getBarCount())
+            {
+                sp.have_bar = 1; sp.bar = *bc;
+            }
         }
     }
-    stepgate_dsp_update_position(dsp.get(),
-                                 haveBpm,  bpm,
-                                 haveBeat, beat,
-                                 true,     playing ? 1.0 : 0.0,
-                                 false,    0.0);
+    stepgate_dsp_update_position(dsp.get(), &sp);
 
     // ---- parameters -> core (raw values; clamping happens in the core) ----
     StepGateParams p;
@@ -156,6 +191,13 @@ void StepGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     p.division    = pDiv->load();
     p.division_mod = pDivMod->load();
     p.enabled     = pEnabled->load();
+    p.pattern_mode = pPatternMode->load();
+    p.meter_source = pMeterSource->load();
+    p.meter_num    = pMeterNum->load();
+    // The denominator parameter is a choice index; the core wants the
+    // actual note value, same as the LV2 port.
+    static const float kDenom[5] = { 1.0f, 2.0f, 4.0f, 8.0f, 16.0f };
+    p.meter_denom  = kDenom[juce::jlimit(0, 4, (int) pMeterDenom->load())];
     p.attack      = pAttack->load();
     p.decay       = pDecay->load();
     p.sustain     = pSustain->load();
@@ -169,8 +211,11 @@ void StepGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // ---- process in place. Same gate applied to L and R, exactly as LV2. ----
     float* L = buffer.getNumChannels() > 0 ? buffer.getWritePointer(0) : nullptr;
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
-    const int step = stepgate_dsp_process(dsp.get(), &p, L, R, L, R, (uint32_t) n);
+    int active = STEPGATE_NUM_STEPS;
+    const int step = stepgate_dsp_process(dsp.get(), &p, L, R, L, R,
+                                          &active, (uint32_t) n);
     currentStep.store(step);
+    activeSteps.store(active);
 
     // Mirror onto any further output channels (e.g. >2-channel layouts).
     for (int ch = 2; ch < buffer.getNumChannels(); ++ch)

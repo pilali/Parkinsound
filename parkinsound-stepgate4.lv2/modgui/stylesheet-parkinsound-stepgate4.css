@@ -100,6 +100,17 @@
             drop-shadow(0 0 6px rgba(255,255,255,0.55));
 }
 
+/* Steps beyond a channel's effective pattern length (bar-aligned
+ * modes): the plugin reports it via the monitored chN_active_steps
+ * outputs. */
+.parkinsound-stepgate4-pedal .step.inactive,
+.parkinsound-stepgate4-pedal .tie.inactive {
+    fill: #1c1c1c !important;
+    filter: none !important;
+    pointer-events: none;
+    cursor: default;
+}
+
 /* --- Header buttons (enabled / sync), styled like the base centre halves --- */
 .parkinsound-stepgate4-pedal .btn {
     pointer-events: auto;

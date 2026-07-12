@@ -41,18 +41,23 @@ private:
     float getParam(const juce::String& id) const;
     void  setParam(const juce::String& id, float value);
 
-    int hitStepIndex(juce::Point<float> v, float rInner, float rOuter) const; // -1 if none
+    int hitStepIndex(juce::Point<float> v, float rInner, float rOuter,
+                     int numSteps) const; // -1 if none
     enum class Drag { None, Attack, DecaySustain, Release };
 
     StepGateAudioProcessor& proc;
     juce::AudioProcessorValueTreeState& apvts;
 
-    juce::Slider   tempoSlider;
-    juce::ComboBox divisionBox, divModBox;
-    juce::Label    tempoLabel, divisionLabel;
+    juce::Slider   tempoSlider, meterNumSlider;
+    juce::ComboBox divisionBox, divModBox, patternBox, meterSrcBox, meterDenomBox;
+    juce::Label    tempoLabel, divisionLabel, patternLabel, meterLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   tempoAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> divisionAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> divModAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> patternAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> meterSrcAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   meterNumAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> meterDenomAtt;
 
     Drag drag = Drag::None;
     juce::Point<float> dragStartVirtual;
@@ -64,7 +69,7 @@ private:
     // ---- virtual geometry (matches the modgui 250x... viewBox) ----
     static constexpr float kVW        = 250.0f;
     static constexpr float kPedalH    = 360.0f;
-    static constexpr float kFooterH   = 78.0f;
+    static constexpr float kFooterH   = 146.0f;   // 4 rows: tempo, div, bar, meter
     static constexpr float kVH        = kPedalH + kFooterH;
     static constexpr float kCX        = 125.0f, kCY = 125.0f;
     static constexpr float kStepOuter = 80.0f, kStepInner = 50.0f;

@@ -7,6 +7,16 @@ ADSR envelope, synced to the host transport or free-running. Divisions run
 from 1/1 to 1/32, each with a straight, **dotted** (x1.5) or **triplet**
 (x2/3) feel (`div_mod`).
 
+The pattern can also follow the **host time signature** (`pattern_mode`):
+in the *1 Bar* / *2 Bars* modes the effective pattern length is derived
+from the meter (12 sixteenths in 3/4 or 6/8, 14 eighths in 7/4, capped at
+16) and step 1 is pinned to the bar start. The meter comes from the host
+(`time:beatsPerBar` / `time:beatUnit` in LV2, the DAW time signature in
+VST3/AU) or from the manual `meter_num` / `meter_denom` ports (also the
+Free Run fallback). The `active_steps` output reports the effective
+length, and the UIs grey out the unused steps. Hosts that count in a
+non-quarter beat unit (e.g. 6/8) are now normalised correctly.
+
 - **LV2** — Linux desktop, MOD Audio, Raspberry Pi...
 - **VST3 / AU / Standalone** — macOS (universal) and Windows, via JUCE
 
@@ -27,9 +37,12 @@ beat*, so they trigger simultaneously and stay phase-locked forever — ideal fo
 tight polyrhythms (see the `Polyrhythm` factory preset).
 
 - **4 mono in / 4 mono out** (`in_1..in_4`, `out_1..out_4`).
-- **Shared**: Sync Source (Host Sync / Free Run), Tempo, global Enabled (soft bypass).
+- **Shared**: Sync Source (Host Sync / Free Run), Tempo, global Enabled
+  (soft bypass), Pattern Length (16 Steps / 1 Bar / 2 Bars) and the
+  meter source / manual meter.
 - **Per channel**: Division and its straight/dotted/triplet feel
-  (`chN_div_mod`), the 16 On/Tie step toggles, and the ADSR envelope.
+  (`chN_div_mod`), the 16 On/Tie step toggles, the ADSR envelope, and
+  the `chN_active_steps` output (effective pattern length).
 
 ---
 
@@ -86,11 +99,15 @@ See `docs/lv2-to-multiplatform.md` for the porting playbook.
 ```sh
 gcc -O2 -Wall -o test/divcheck test/divcheck.c -ldl -lm && ./test/divcheck
 gcc -O2 -Wall -o test/sync4    test/sync4.c    -ldl -lm && ./test/sync4
+gcc -O2 -Wall -o test/barcheck test/barcheck.c -ldl -lm && ./test/barcheck
 ```
 
 `test/sync4` verifies the 4-channel sample-accurate sync: identical channels
 produce bit-identical output, and a slower channel's step boundaries land on
-the exact same samples as a faster channel's.
+the exact same samples as a faster channel's (including straight vs triplet,
+which re-lock 3:2). `test/barcheck` simulates hosts in 3/4, 6/8, 5/4 and 7/4
+(continuous and mod-host-style quantised transports, plus a mid-run meter
+change) and checks the bar-aligned pattern modes.
 
 ---
 

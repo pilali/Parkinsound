@@ -32,6 +32,18 @@ struct StepGateDsp {
     double prev_received_beat;
     int    has_prev_beat;
 
+    /* Host meter state (time:beatsPerBar / time:beatUnit or the JUCE
+     * time signature). 0 = the host never told us. */
+    double    host_beats_per_bar;
+    int       host_beat_unit;
+    /* Bar reference: absolute transport beat of a known bar start,
+     * derived from (received beat - received barBeat) so both values
+     * share the host's quantisation, or taken verbatim from JUCE's
+     * ppqPositionOfLastBarStart. */
+    double    host_bar_start;
+    int       has_bar_ref;
+    long long host_bar;          /* bar counter, -1 = unknown */
+
     /* Free-run state (single-voice path). */
     double free_phase;
     int    free_step;
@@ -69,6 +81,115 @@ step_length_in_beats(float division, float division_mod)
     if (mod < 0) mod = 0;
     if (mod > 2) mod = 2;
     return div_factor[div] * mod_factor[mod];
+}
+
+static inline int
+clampi(int v, int lo, int hi)
+{
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+/* Wrap x into [0, period). */
+static inline double
+wrap_pos(double x, double period)
+{
+    double r = fmod(x, period);
+    return r < 0.0 ? r + period : r;
+}
+
+/* Block-level resolution of the meter / pattern-length settings. All
+ * lengths are in quarter notes. */
+typedef struct {
+    int    pattern_mode;   /* 0 fixed-16, 1 one bar, 2 two bars */
+    double qs;             /* quarters per transport beat (host sync) */
+    double bar_len_q;      /* bar length in quarters */
+    double period_q;       /* pattern period (bar_len_q * nbars) */
+    double origin_q;       /* pattern origin in quarters (absolute), already
+                              shifted for the bar parity in two-bar mode */
+    int    use_bar_ref;    /* origin_q valid (else wrap from beat 0) */
+} MeterInfo;
+
+static void
+resolve_meter(const StepGateDsp* self, int host_sync,
+              float pattern_mode, float meter_source,
+              float meter_num, float meter_denom,
+              MeterInfo* mi)
+{
+    mi->pattern_mode = clampi((int)lroundf(pattern_mode), 0, 2);
+
+    /* Transport-beat -> quarter-note normalisation. In a 6/8 host,
+     * time:beat counts eighth notes, so one transport beat is 4/8 of a
+     * quarter. Free-run counters are kept in quarters by construction. */
+    const int bu = (host_sync && self->host_beat_unit > 0)
+                       ? self->host_beat_unit : 4;
+    mi->qs = 4.0 / (double)bu;
+
+    const int manual = ((int)lroundf(meter_source) == 1);
+    const int mnum   = clampi((int)lroundf(meter_num), 1, 16);
+    const int mden   = clampi((int)lroundf(meter_denom), 1, 16);
+
+    if (!manual && host_sync && self->host_beats_per_bar > 0.0) {
+        mi->bar_len_q = self->host_beats_per_bar * mi->qs;
+    } else {
+        mi->bar_len_q = (double)mnum * 4.0 / (double)mden;
+    }
+    if (mi->bar_len_q <= 0.0) mi->bar_len_q = 4.0;
+
+    const int nbars = (mi->pattern_mode == 2) ? 2 : 1;
+    mi->period_q = mi->bar_len_q * (double)nbars;
+
+    /* Pattern origin: a host-provided bar reference when available (and
+     * meaningful: host sync + auto meter), otherwise bars are counted
+     * arithmetically from transport beat 0 (mod-host starts there). */
+    mi->use_bar_ref = 0;
+    mi->origin_q    = 0.0;
+    if (host_sync && !manual && self->has_bar_ref) {
+        double origin = self->host_bar_start * mi->qs;
+        if (nbars == 2) {
+            long long bar = self->host_bar;
+            if (bar < 0) {
+                /* No bar counter: infer parity arithmetically, assuming
+                 * a constant meter since beat 0. */
+                bar = (long long)floor(origin / mi->bar_len_q + 0.5);
+            }
+            if (bar % 2 != 0) origin -= mi->bar_len_q;
+        }
+        mi->origin_q    = origin;
+        mi->use_bar_ref = 1;
+    }
+}
+
+/* Effective pattern length in steps for one voice. */
+static int
+active_steps_for(const MeterInfo* mi, double step_in_beats)
+{
+    if (mi->pattern_mode == 0) return NUM_STEPS;
+    long n = lround(mi->period_q / step_in_beats);
+    if (n < 1) n = 1;
+    if (n > NUM_STEPS) n = NUM_STEPS;
+    return (int)n;
+}
+
+/* Step index + phase of one voice at absolute position beat_q (quarter
+ * notes). In the bar modes the position is taken relative to the
+ * pattern origin and wrapped into the pattern period, so step 1 always
+ * lands on a bar start. */
+static inline int
+voice_step_at(const MeterInfo* mi, double beat_q, double step_in_beats,
+              int active_steps, double* phase_out)
+{
+    double seq_pos;
+    if (mi->pattern_mode == 0) {
+        seq_pos = beat_q / step_in_beats;
+    } else {
+        seq_pos = wrap_pos(beat_q - mi->origin_q, mi->period_q) / step_in_beats;
+    }
+    const double seq_floor = floor(seq_pos);
+    long step_index = (long)seq_floor;
+    *phase_out = seq_pos - seq_floor;
+    long mod_step = step_index % active_steps;
+    if (mod_step < 0) mod_step += active_steps;
+    return (int)mod_step;
 }
 
 /* Per-step ADSR envelope, all times expressed as fractions of the step
@@ -120,6 +241,11 @@ stepgate_dsp_new(double sample_rate)
     self->host_speed          = 1.0;
     self->prev_received_beat  = 0.0;
     self->has_prev_beat       = 0;
+    self->host_beats_per_bar  = 0.0;
+    self->host_beat_unit      = 0;
+    self->host_bar_start      = 0.0;
+    self->has_bar_ref         = 0;
+    self->host_bar            = -1;
     self->free_phase          = 0.0;
     self->free_step           = 0;
     self->free_beat           = 0.0;
@@ -148,18 +274,24 @@ stepgate_dsp_reset(StepGateDsp* self)
 }
 
 void
-stepgate_dsp_update_position(StepGateDsp* self,
-                             int have_bpm,   double bpm,
-                             int have_beat,  double beat,
-                             int have_speed, double speed,
-                             int have_frame, double frame)
+stepgate_dsp_update_position(StepGateDsp* self, const StepGatePosition* p)
 {
-    if (have_bpm) {
-        if (bpm > 0.0) self->host_bpm = bpm;
+    if (p->have_bpm) {
+        if (p->bpm > 0.0) self->host_bpm = p->bpm;
     }
-    if (have_speed) {
-        self->host_speed = speed;
+    if (p->have_speed) {
+        self->host_speed = p->speed;
     }
+    if (p->have_beat_unit && p->beat_unit > 0) {
+        self->host_beat_unit = p->beat_unit;
+    }
+    if (p->have_beats_per_bar && p->beats_per_bar > 0.0) {
+        self->host_beats_per_bar = p->beats_per_bar;
+    }
+    if (p->have_bar) {
+        self->host_bar = p->bar;
+    }
+
     /* Resynchronise the local beat counter to the host's absolute
      * position whenever we get a fresh time:Position event.
      *
@@ -173,22 +305,38 @@ stepgate_dsp_update_position(StepGateDsp* self,
      *
      * time:frame is continuous (sample-precise) when present and is
      * preferred whenever the host supplies it together with a BPM. */
-    if (have_frame && self->host_bpm > 0.0) {
-        self->host_beat = frame * self->host_bpm / (60.0 * self->sample_rate);
-    } else if (have_beat) {
-        double v = beat;
+    if (p->have_frame && self->host_bpm > 0.0) {
+        self->host_beat = p->frame * self->host_bpm / (60.0 * self->sample_rate);
+    } else if (p->have_beat) {
+        double v = p->beat;
         if (!self->has_prev_beat || v != self->prev_received_beat) {
             self->host_beat = v;
             self->has_prev_beat = 1;
         }
         self->prev_received_beat = v;
     }
+
+    /* Bar reference for the bar-aligned pattern modes.
+     *
+     * JUCE hands us the bar start directly. LV2 hosts give barBeat: use
+     * (received beat - received barBeat), NOT the integrated host_beat,
+     * because when mod-host quantises time:beat to integers it
+     * quantises time:barBeat the same way, so their difference is the
+     * exact integer bar start even between ticks. */
+    if (p->have_bar_start) {
+        self->host_bar_start = p->bar_start;
+        self->has_bar_ref    = 1;
+    } else if (p->have_bar_beat && p->have_beat) {
+        self->host_bar_start = p->beat - p->bar_beat;
+        self->has_bar_ref    = 1;
+    }
 }
 
 int
 stepgate_dsp_process(StepGateDsp* self, const StepGateParams* params,
                      const float* inL, const float* inR,
-                     float* outL, float* outR, uint32_t n_samples)
+                     float* outL, float* outR,
+                     int* active_steps_out, uint32_t n_samples)
 {
     const int   sync       = (int)lroundf(params->sync_source);
     const float tempo_ctrl = params->tempo;
@@ -212,12 +360,20 @@ stepgate_dsp_process(StepGateDsp* self, const StepGateParams* params,
     const double step_in_beats =
         step_length_in_beats(params->division, params->division_mod);
 
+    MeterInfo mi;
+    resolve_meter(self, host_sync,
+                  params->pattern_mode, params->meter_source,
+                  params->meter_num, params->meter_denom, &mi);
+    const int active_steps = active_steps_for(&mi, step_in_beats);
+    if (active_steps_out) *active_steps_out = active_steps;
+
     const double beat_inc = bpm / (60.0 * self->sample_rate);
 
     /* Free-run only: reset to step 1 when lv2:enabled goes 0 -> 1. */
     if (!host_sync && enabled && !self->prev_enabled) {
         self->free_phase = 0.0;
         self->free_step  = 0;
+        self->free_beat  = 0.0;
     }
     self->prev_enabled = enabled;
 
@@ -251,16 +407,23 @@ stepgate_dsp_process(StepGateDsp* self, const StepGateParams* params,
              * the transport is paused, which is the right behaviour
              * for a tremolo-style step gate. */
             self->host_beat += beat_inc;
-            const double seq_pos    = self->host_beat / step_in_beats;
-            const double seq_floor  = floor(seq_pos);
-            long step_index = (long)seq_floor;
-            in_step_phase = seq_pos - seq_floor;
-            long mod_step = step_index % NUM_STEPS;
-            if (mod_step < 0) mod_step += NUM_STEPS;
-            step = (int)mod_step;
+            const double beat_q = self->host_beat * mi.qs;
+            step = voice_step_at(&mi, beat_q, step_in_beats,
+                                 active_steps, &in_step_phase);
         } else if (enabled) {
-            step = self->free_step;
-            in_step_phase = self->free_phase;
+            if (mi.pattern_mode == 0) {
+                step = self->free_step;
+                in_step_phase = self->free_phase;
+            } else {
+                /* Bar modes need an absolute position; the free-run
+                 * master beat (in quarters, reset on enable) provides
+                 * it, with bars counted arithmetically from 0. */
+                step = voice_step_at(&mi, self->free_beat, step_in_beats,
+                                     active_steps, &in_step_phase);
+            }
+            /* Advance both free-run counters so switching pattern_mode
+             * mid-flight stays continuous. */
+            self->free_beat  += beat_inc;
             self->free_phase += beat_inc / step_in_beats;
             if (self->free_phase >= 1.0) {
                 self->free_phase -= 1.0;
@@ -278,8 +441,10 @@ stepgate_dsp_process(StepGateDsp* self, const StepGateParams* params,
             target = 1.0f;
         } else {
             const int on        = step_on_b[step];
-            const int prev_step = (step + NUM_STEPS - 1) % NUM_STEPS;
-            const int next_step = (step + 1) % NUM_STEPS;
+            /* Neighbours wrap at the effective pattern length, so ties
+             * behave at the loop seam of a shortened (bar-mode) pattern. */
+            const int prev_step = (step + active_steps - 1) % active_steps;
+            const int next_step = (step + 1) % active_steps;
             /* tie has an anchor only if the previous step was on.
              * Otherwise the tied step retriggers a fresh envelope. */
             const int tied_in   = on && step_tie_b[step] && step_on_b[prev_step];
@@ -313,6 +478,7 @@ stepgate_dsp_process_multi(StepGateDsp* self,
                            const float* const* ins,
                            float* const* outs,
                            int* current_steps,
+                           int* active_steps_out,
                            uint32_t n_samples)
 {
     if (num_voices > STEPGATE_MAX_VOICES) num_voices = STEPGATE_MAX_VOICES;
@@ -332,6 +498,11 @@ stepgate_dsp_process_multi(StepGateDsp* self,
     if (bpm < 20.0)  bpm = 20.0;
     if (bpm > 999.0) bpm = 999.0;
 
+    MeterInfo mi;
+    resolve_meter(self, host_sync,
+                  shared->pattern_mode, shared->meter_source,
+                  shared->meter_num, shared->meter_denom, &mi);
+
     const double beat_inc = bpm / (60.0 * self->sample_rate);
 
     /* Free-run only: reset the shared master beat to step 1 when
@@ -349,11 +520,14 @@ stepgate_dsp_process_multi(StepGateDsp* self,
      * stable across one process call, so tie boundaries can be resolved
      * by looking at neighbouring steps without re-reading every sample. */
     double step_in_beats[STEPGATE_MAX_VOICES];
+    int    active[STEPGATE_MAX_VOICES];
     int    son [STEPGATE_MAX_VOICES][NUM_STEPS];
     int    stie[STEPGATE_MAX_VOICES][NUM_STEPS];
     for (int v = 0; v < num_voices; ++v) {
         step_in_beats[v] =
             step_length_in_beats(voices[v].division, voices[v].division_mod);
+        active[v] = active_steps_for(&mi, step_in_beats[v]);
+        if (active_steps_out) active_steps_out[v] = active[v];
         for (int k = 0; k < NUM_STEPS; ++k) {
             son [v][k] = (voices[v].step_on[k]  > 0.5f);
             stie[v][k] = (voices[v].step_tie[k] > 0.5f);
@@ -384,17 +558,16 @@ stepgate_dsp_process_multi(StepGateDsp* self,
                 /* lv2:enabled = 0 -> transparent pass-through. */
                 target = 1.0f;
             } else {
-                const double seq_pos   = master / step_in_beats[v];
-                const double seq_floor = floor(seq_pos);
-                long   step_index      = (long)seq_floor;
-                double in_step_phase   = seq_pos - seq_floor;
-                long   mod_step        = step_index % NUM_STEPS;
-                if (mod_step < 0) mod_step += NUM_STEPS;
-                step = (int)mod_step;
+                /* Free-run counters are already in quarters; the host
+                 * beat is normalised by the block-constant qs factor. */
+                const double beat_q = host_sync ? master * mi.qs : master;
+                double in_step_phase;
+                step = voice_step_at(&mi, beat_q, step_in_beats[v],
+                                     active[v], &in_step_phase);
 
                 const int on        = son[v][step];
-                const int prev_step = (step + NUM_STEPS - 1) % NUM_STEPS;
-                const int next_step = (step + 1) % NUM_STEPS;
+                const int prev_step = (step + active[v] - 1) % active[v];
+                const int next_step = (step + 1) % active[v];
                 const int tied_in   = on && stie[v][step] && son[v][prev_step];
                 const int tied_out  = on && son[v][next_step] && stie[v][next_step];
                 if (!on) target = 0.0f;

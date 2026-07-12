@@ -160,6 +160,19 @@ function (event, funcs) {
         }
     }
 
+    /* Grey out the steps beyond one channel's effective pattern length
+     * (monitored chN_active_steps output, meter-derived in the
+     * bar-aligned pattern modes). */
+    function applyActiveSteps(iconEl, ch, n) {
+        n = clamp(Math.round(n), 1, NSTEPS);
+        var nodes = iconEl.querySelectorAll(
+            '.step[data-ch="' + ch + '"], .tie[data-ch="' + ch + '"]');
+        for (var i = 0; i < nodes.length; i++) {
+            var s = parseInt(nodes[i].getAttribute('data-step'), 10);
+            nodes[i].classList.toggle('inactive', s > n);
+        }
+    }
+
     /* ---- Click handlers ---------------------------------------------- */
     function stopMouseDown(e) { e.stopPropagation(); }
 
@@ -428,6 +441,9 @@ function (event, funcs) {
         }
         if ((m = sym.match(/^ch(\d)_current_step$/))) {
             highlightStep(iconEl, parseInt(m[1], 10) - 1, parseInt(value, 10)); return;
+        }
+        if ((m = sym.match(/^ch(\d)_active_steps$/))) {
+            applyActiveSteps(iconEl, parseInt(m[1], 10) - 1, parseFloat(value)); return;
         }
         if ((m = sym.match(/^ch(\d)_(attack|decay|sustain|release)$/))) {
             var c = parseInt(m[1], 10) - 1;

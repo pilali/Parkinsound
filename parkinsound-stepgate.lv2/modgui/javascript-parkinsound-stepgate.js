@@ -161,6 +161,18 @@ function (event, funcs) {
         }
     }
 
+    /* Grey out the sectors beyond the effective pattern length (the
+     * plugin republishes it through the monitored active_steps output,
+     * derived from the host meter in the bar-aligned pattern modes). */
+    function applyActiveSteps(iconEl, n) {
+        n = clamp(Math.round(n), 1, 16);
+        var nodes = iconEl.querySelectorAll('.step, .tie');
+        for (var i = 0; i < nodes.length; i++) {
+            var s = parseInt(nodes[i].getAttribute('data-step'), 10);
+            nodes[i].classList.toggle('inactive', s > n);
+        }
+    }
+
     /* ------------------------------------------------------------------ */
     /* Click handlers (step / tie)                                        */
     /* ------------------------------------------------------------------ */
@@ -421,6 +433,7 @@ function (event, funcs) {
                 if (!Object.prototype.hasOwnProperty.call(event.value, sym)) continue;
                 var v = parseFloat(event.value[sym]);
                 if      (sym === 'current_step') { highlightCurrentStep(iconEl, parseInt(event.value[sym], 10)); }
+                else if (sym === 'active_steps') { applyActiveSteps(iconEl, v); }
                 else if (sym === 'enabled')      { applyEnabled(iconEl, v > 0.5); }
                 else if (sym === 'sync_source')  { applySync(iconEl, v > 0.5); }
                 else if (sym === 'attack')       { iconEl._pgState.attack  = v; }
@@ -438,6 +451,7 @@ function (event, funcs) {
         var sym2 = event.symbol;
         var v2   = parseFloat(event.value);
         if      (sym2 === 'current_step') { highlightCurrentStep(iconEl, parseInt(event.value, 10)); }
+        else if (sym2 === 'active_steps') { applyActiveSteps(iconEl, v2); }
         else if (sym2 === 'enabled')      { applyEnabled(iconEl, v2 > 0.5); }
         else if (sym2 === 'sync_source')  { applySync(iconEl, v2 > 0.5); }
         else if (sym2 === 'attack')       { iconEl._pgState.attack  = v2; updateADSRCurve(iconEl); }

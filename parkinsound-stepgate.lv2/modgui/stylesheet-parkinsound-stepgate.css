@@ -78,6 +78,16 @@
             drop-shadow(0 0 14px rgba(255,255,255,0.85));
 }
 
+/* Steps beyond the effective pattern length (bar-aligned modes): the
+ * plugin reports it through the monitored active_steps output. */
+.parkinsound-stepgate-pedal .step.inactive,
+.parkinsound-stepgate-pedal .tie.inactive {
+    fill: #1c1c1c !important;
+    filter: none !important;
+    pointer-events: none;
+    cursor: default;
+}
+
 /* --- Centre halves (2 buttons in the middle) --- */
 .parkinsound-stepgate-pedal .centre-half {
     pointer-events: auto;

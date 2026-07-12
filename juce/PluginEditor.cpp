@@ -90,6 +90,22 @@ StepGateEditor::StepGateEditor(StepGateAudioProcessor& p)
     for (int i = 0; i < 3; ++i)
         divModBox.addItem(juce::StringArray { "Straight","Dotted","Triplet" }[i], i + 1);
     styleBox(divModBox);
+    for (int i = 0; i < 3; ++i)
+        patternBox.addItem(juce::StringArray { "16 Steps","1 Bar","2 Bars" }[i], i + 1);
+    styleBox(patternBox);
+    for (int i = 0; i < 2; ++i)
+        meterSrcBox.addItem(juce::StringArray { "Auto","Manual" }[i], i + 1);
+    styleBox(meterSrcBox);
+    for (int i = 0; i < 5; ++i)
+        meterDenomBox.addItem(juce::StringArray { "1","2","4","8","16" }[i], i + 1);
+    styleBox(meterDenomBox);
+
+    meterNumSlider.setSliderStyle(juce::Slider::IncDecButtons);
+    meterNumSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 24, 18);
+    meterNumSlider.setColour(juce::Slider::textBoxTextColourId, juce::Colours::white);
+    meterNumSlider.setColour(juce::Slider::textBoxOutlineColourId, grey(0x44));
+    meterNumSlider.setColour(juce::Slider::textBoxBackgroundColourId, grey(0x1a));
+    addAndMakeVisible(meterNumSlider);
 
     auto styleLabel = [this](juce::Label& l, const juce::String& t)
     {
@@ -101,6 +117,8 @@ StepGateEditor::StepGateEditor(StepGateAudioProcessor& p)
     };
     styleLabel(tempoLabel, "TEMPO");
     styleLabel(divisionLabel, "DIV");
+    styleLabel(patternLabel, "BAR");
+    styleLabel(meterLabel, "METER");
 
     tempoAtt    = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         apvts, "tempo", tempoSlider);
@@ -108,6 +126,14 @@ StepGateEditor::StepGateEditor(StepGateAudioProcessor& p)
         apvts, "division", divisionBox);
     divModAtt   = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         apvts, "div_mod", divModBox);
+    patternAtt  = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        apvts, "pattern_mode", patternBox);
+    meterSrcAtt = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        apvts, "meter_source", meterSrcBox);
+    meterNumAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        apvts, "meter_num", meterNumSlider);
+    meterDenomAtt = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        apvts, "meter_denom", meterDenomBox);
 
     setResizable(false, false);
     setSize((int) (kVW * 1.4f), (int) (kVH * 1.4f));
@@ -139,7 +165,8 @@ void StepGateEditor::setParam(const juce::String& id, float value)
     }
 }
 
-int StepGateEditor::hitStepIndex(juce::Point<float> v, float rInner, float rOuter) const
+int StepGateEditor::hitStepIndex(juce::Point<float> v, float rInner, float rOuter,
+                                 int numSteps) const
 {
     const float dx = v.x - kCX, dy = v.y - kCY;
     const float r  = std::sqrt(dx * dx + dy * dy);
@@ -147,7 +174,8 @@ int StepGateEditor::hitStepIndex(juce::Point<float> v, float rInner, float rOute
     float ang = std::atan2(dy, dx) * 180.0f / kPi;          // SVG deg
     float norm = ang - kStartDeg;
     norm = std::fmod(std::fmod(norm, 360.0f) + 360.0f, 360.0f);
-    return juce::jlimit(0, 15, (int) std::floor(norm / kStepDeg));
+    const float stepDeg = 360.0f / (float) numSteps;
+    return juce::jlimit(0, numSteps - 1, (int) std::floor(norm / stepDeg));
 }
 
 //==============================================================================
@@ -161,11 +189,16 @@ void StepGateEditor::paint(juce::Graphics& g)
     const int curStep = proc.getCurrentStep();
 
     // ---- rings ----
-    for (int i = 0; i < 16; ++i)
+    // The ring only shows the effective pattern: in the bar modes the
+    // meter decides how many steps one cycle holds (12 in 3/4 at 1/16,
+    // 14 in 7/4 at 1/8...), and the sectors widen to fill the circle.
+    const int   numSteps = juce::jlimit(1, 16, proc.getActiveSteps());
+    const float stepDeg  = 360.0f / (float) numSteps;
+    for (int i = 0; i < numSteps; ++i)
     {
         const int   n         = i + 1;
-        const float tieStart  = kStartDeg + (float) i * kStepDeg;
-        const float tieEnd    = tieStart + kStepDeg;
+        const float tieStart  = kStartDeg + (float) i * stepDeg;
+        const float tieEnd    = tieStart + stepDeg;
         const float stepStart = tieStart + kGapDeg * 0.5f;
         const float stepEnd   = tieEnd   - kGapDeg * 0.5f;
 
@@ -257,6 +290,12 @@ void StepGateEditor::resized()
     divisionLabel.setBounds(vx(12), vx(kPedalH + 44), vx(46), rowH);
     divisionBox.setBounds(vx(58), vx(kPedalH + 44), vx(72), rowH);
     divModBox.setBounds(vx(136), vx(kPedalH + 44), vx(102), rowH);
+    patternLabel.setBounds(vx(12), vx(kPedalH + 78), vx(46), rowH);
+    patternBox.setBounds(vx(58), vx(kPedalH + 78), vx(102), rowH);
+    meterLabel.setBounds(vx(12), vx(kPedalH + 112), vx(46), rowH);
+    meterSrcBox.setBounds(vx(58), vx(kPedalH + 112), vx(72), rowH);
+    meterNumSlider.setBounds(vx(136), vx(kPedalH + 112), vx(52), rowH);
+    meterDenomBox.setBounds(vx(192), vx(kPedalH + 112), vx(46), rowH);
 }
 
 //==============================================================================
@@ -296,15 +335,16 @@ void StepGateEditor::mouseDown(const juce::MouseEvent& e)
         return;
     }
 
-    // Step ring then tie ring.
-    int idx = hitStepIndex(v, kStepInner, kStepOuter);
+    // Step ring then tie ring (only the active sectors are shown).
+    const int numSteps = juce::jlimit(1, 16, proc.getActiveSteps());
+    int idx = hitStepIndex(v, kStepInner, kStepOuter, numSteps);
     if (idx >= 0)
     {
         const auto id = "step_" + juce::String(idx + 1) + "_on";
         setParam(id, getParam(id) > 0.5f ? 0.0f : 1.0f);
         return;
     }
-    idx = hitStepIndex(v, kTieInner, kTieOuter);
+    idx = hitStepIndex(v, kTieInner, kTieOuter, numSteps);
     if (idx >= 0)
     {
         const auto id = "step_" + juce::String(idx + 1) + "_tie";

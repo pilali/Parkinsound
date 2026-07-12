@@ -21,6 +21,10 @@ The plug-in exposes 164 ports laid out exactly as the C source expects:
     164..167  ch1_div_mod..ch4_div_mod (appended in v1.2; LV2 forbids
               renumbering existing ports, so later additions always go
               after the last historical index, never inside the blocks)
+    168..171  pattern_mode, meter_source, meter_num, meter_denom
+              (shared bar-pattern / meter controls, appended in v1.2)
+    172..175  ch1..ch4_active_steps (per-channel effective pattern
+              length outputs, monitored by the modgui)
 
 Keeping the .ttl machine-generated guarantees it stays consistent with
 the computable port layout in stepgate4.c. Run from the bundle dir:
@@ -162,6 +166,41 @@ for ch in range(NUM_CHANNELS):
         props=["lv2:enumeration", "lv2:integer"], scale=DIV_MOD_SCALE,
     ))
 
+# ---- appended ports (v1.2): shared bar-pattern / meter controls ----------
+PATTERN_BASE = DIV_MOD_BASE + NUM_CHANNELS  # 168
+add(control_in(
+    PATTERN_BASE + 0, "pattern_mode", "Pattern Length", 0, 0, 2,
+    props=["lv2:enumeration", "lv2:integer"],
+    scale=[("16 Steps", 0), ("1 Bar", 1), ("2 Bars", 2)],
+))
+add(control_in(
+    PATTERN_BASE + 1, "meter_source", "Meter Source", 0, 0, 1,
+    props=["lv2:enumeration", "lv2:integer"],
+    scale=[("Auto (Host)", 0), ("Manual", 1)],
+))
+add(control_in(
+    PATTERN_BASE + 2, "meter_num", "Meter Numerator", 4, 1, 16,
+    props=["lv2:integer"],
+))
+add(control_in(
+    PATTERN_BASE + 3, "meter_denom", "Meter Denominator", 4, 1, 16,
+    props=["lv2:enumeration", "lv2:integer"],
+    scale=[("1", 1), ("2", 2), ("4", 4), ("8", 8), ("16", 16)],
+))
+
+# ---- appended ports (v1.2): per-channel active-steps outputs -------------
+ACTIVE_BASE = PATTERN_BASE + 4  # 172
+for ch in range(NUM_CHANNELS):
+    n = ch + 1
+    add([
+        "a lv2:ControlPort , lv2:OutputPort ;",
+        f"lv2:index {ACTIVE_BASE + ch} ;",
+        f'lv2:symbol "ch{n}_active_steps" ;',
+        f'lv2:name "Ch{n} Active Steps" ;',
+        "lv2:minimum 1 ; lv2:maximum 16 ;",
+        "lv2:portProperty lv2:integer ;",
+    ])
+
 
 def render():
     header = """@prefix doap:   <http://usefulinc.com/ns/doap#> .
@@ -195,7 +234,8 @@ def render():
     ) + " ;\n"
 
     monitored = " ,\n        ".join(
-        f'[ lv2:symbol "ch{ch + 1}_current_step" ]' for ch in range(NUM_CHANNELS)
+        [f'[ lv2:symbol "ch{ch + 1}_current_step" ]' for ch in range(NUM_CHANNELS)] +
+        [f'[ lv2:symbol "ch{ch + 1}_active_steps" ]' for ch in range(NUM_CHANNELS)]
     )
 
     modgui = """

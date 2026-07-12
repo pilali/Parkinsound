@@ -51,6 +51,10 @@ public:
     /* 1-based current step, for the editor's monitor display. */
     int getCurrentStep() const { return currentStep.load(); }
 
+    /* Effective pattern length (16 in the legacy fixed mode, bar-derived
+     * in the bar modes), for the editor's adaptive ring. */
+    int getActiveSteps() const { return activeSteps.load(); }
+
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void cacheParameterPointers();
@@ -62,6 +66,10 @@ private:
     std::atomic<float>* pTempo  = nullptr;
     std::atomic<float>* pDiv    = nullptr;
     std::atomic<float>* pDivMod = nullptr;
+    std::atomic<float>* pPatternMode = nullptr;
+    std::atomic<float>* pMeterSource = nullptr;
+    std::atomic<float>* pMeterNum    = nullptr;
+    std::atomic<float>* pMeterDenom  = nullptr;
     std::atomic<float>* pEnabled = nullptr;
     std::atomic<float>* pAttack  = nullptr;
     std::atomic<float>* pDecay   = nullptr;
@@ -75,6 +83,7 @@ private:
     double preparedRate = 0.0;
 
     std::atomic<int> currentStep { 1 };
+    std::atomic<int> activeSteps { STEPGATE_NUM_STEPS };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StepGateAudioProcessor)
 };

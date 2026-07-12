@@ -1373,6 +1373,80 @@
         lv2:scalePoint [ rdfs:label "Straight" ; rdf:value 0 ] ;
         lv2:scalePoint [ rdfs:label "Dotted" ; rdf:value 1 ] ;
         lv2:scalePoint [ rdfs:label "Triplet" ; rdf:value 2 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 168 ;
+        lv2:symbol "pattern_mode" ;
+        lv2:name "Pattern Length" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "16 Steps" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "1 Bar" ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "2 Bars" ; rdf:value 2 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 169 ;
+        lv2:symbol "meter_source" ;
+        lv2:name "Meter Source" ;
+        lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "Auto (Host)" ; rdf:value 0 ] ;
+        lv2:scalePoint [ rdfs:label "Manual" ; rdf:value 1 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 170 ;
+        lv2:symbol "meter_num" ;
+        lv2:name "Meter Numerator" ;
+        lv2:default 4 ; lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:InputPort ;
+        lv2:index 171 ;
+        lv2:symbol "meter_denom" ;
+        lv2:name "Meter Denominator" ;
+        lv2:default 4 ; lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:enumeration , lv2:integer ;
+        lv2:scalePoint [ rdfs:label "1" ; rdf:value 1 ] ;
+        lv2:scalePoint [ rdfs:label "2" ; rdf:value 2 ] ;
+        lv2:scalePoint [ rdfs:label "4" ; rdf:value 4 ] ;
+        lv2:scalePoint [ rdfs:label "8" ; rdf:value 8 ] ;
+        lv2:scalePoint [ rdfs:label "16" ; rdf:value 16 ] ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 172 ;
+        lv2:symbol "ch1_active_steps" ;
+        lv2:name "Ch1 Active Steps" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 173 ;
+        lv2:symbol "ch2_active_steps" ;
+        lv2:name "Ch2 Active Steps" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 174 ;
+        lv2:symbol "ch3_active_steps" ;
+        lv2:name "Ch3 Active Steps" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
+    ] ,
+    [
+        a lv2:ControlPort , lv2:OutputPort ;
+        lv2:index 175 ;
+        lv2:symbol "ch4_active_steps" ;
+        lv2:name "Ch4 Active Steps" ;
+        lv2:minimum 1 ; lv2:maximum 16 ;
+        lv2:portProperty lv2:integer ;
     ] ;
 
     modgui:gui [
@@ -1392,5 +1466,9 @@
         modgui:monitoredOutputs [ lv2:symbol "ch1_current_step" ] ,
         [ lv2:symbol "ch2_current_step" ] ,
         [ lv2:symbol "ch3_current_step" ] ,
-        [ lv2:symbol "ch4_current_step" ]
+        [ lv2:symbol "ch4_current_step" ] ,
+        [ lv2:symbol "ch1_active_steps" ] ,
+        [ lv2:symbol "ch2_active_steps" ] ,
+        [ lv2:symbol "ch3_active_steps" ] ,
+        [ lv2:symbol "ch4_active_steps" ]
     ] .

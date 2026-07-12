@@ -277,9 +277,9 @@ non cliquables). Recommandé : grisage, géométrie inchangée.
 |---|---|---|
 | **0** | ✅ *Fait* — Rebaser Step Gate 4 sur `src/stepgate_dsp` (`stepgate_dsp_process_multi`), non-régression vérifiée bit-exacte contre l'ancien binaire | ~1 j |
 | **1** | ✅ *Fait* — Volet A complet : `div_mod` cœur + 2 wrappers LV2 + TTL/gen_ttl + JUCE + modgui SG4 + tests `divcheck`/`sync4` étendus | 1–2 j |
-| **2** | Normalisation `beatUnit` (§3.2) + ingestion `beatsPerBar`/`bar`/`barBeat` (LV2) et `getTimeSignature` (JUCE) dans le cœur | ~1 j |
-| **3** | `pattern_mode` + `active_steps` + alignement mesure dans le DSP ; ports manuels de fallback ; tests (3/4, 6/8, 5/4, 7/4, changement en cours de lecture) | 2–3 j |
-| **4** | Adaptation des UIs : éditeur JUCE, modgui mono (grisage), modgui SG4 (par canal) ; captures modgui régénérées | 2–3 j |
+| **2** | ✅ *Fait* — Normalisation `beatUnit` (§3.2) + ingestion `beatsPerBar`/`bar`/`barBeat` (LV2) et `getTimeSignature`/`getPpqPositionOfLastBarStart` (JUCE) via la struct `StepGatePosition` | ~1 j |
+| **3** | ✅ *Fait* — `pattern_mode` + `active_steps` + alignement mesure ; ports manuels de fallback ; test `barcheck` (3/4, 6/8, 5/4, 7/4, quantisation mod-host, changement en cours de lecture) ; non-régression bit-exacte en mode legacy | 2–3 j |
+| **4** | ✅ *Fait* — Adaptation des UIs : anneau adaptatif + rangées BAR/METER dans l'éditeur JUCE, grisage des pas inactifs dans les deux modguis via les sorties monitorées `active_steps` | 2–3 j |
 
 Chaque phase est livrable indépendamment ; les phases 1 et 2 apportent déjà
 une valeur utilisateur nette (nouvelles divisions + lecture correcte en

@@ -62,8 +62,13 @@ typedef enum {
 #define PORT_RELEASE (PORT_SUSTAIN + 1)
 /* Appended after the original layout (LV2 forbids renumbering existing
  * ports without a new plugin URI). */
-#define PORT_DIV_MOD (PORT_RELEASE + 1)
-#define NUM_PORTS    (PORT_DIV_MOD + 1)
+#define PORT_DIV_MOD      (PORT_RELEASE + 1)      /* 46 */
+#define PORT_PATTERN_MODE (PORT_DIV_MOD + 1)      /* 47 */
+#define PORT_METER_SOURCE (PORT_PATTERN_MODE + 1) /* 48 */
+#define PORT_METER_NUM    (PORT_METER_SOURCE + 1) /* 49 */
+#define PORT_METER_DENOM  (PORT_METER_NUM + 1)    /* 50 */
+#define PORT_ACTIVE_STEPS (PORT_METER_DENOM + 1)  /* 51, output */
+#define NUM_PORTS         (PORT_ACTIVE_STEPS + 1)
 
 typedef struct {
     LV2_URID atom_Blank;
@@ -77,6 +82,10 @@ typedef struct {
     LV2_URID time_beatsPerMinute;
     LV2_URID time_speed;
     LV2_URID time_frame;
+    LV2_URID time_beatsPerBar;
+    LV2_URID time_beatUnit;
+    LV2_URID time_bar;
+    LV2_URID time_barBeat;
 } URIs;
 
 typedef struct {
@@ -102,6 +111,11 @@ typedef struct {
     const float* sustain_port;
     const float* release_port;
     const float* div_mod_port;
+    const float* pattern_mode_port;
+    const float* meter_source_port;
+    const float* meter_num_port;
+    const float* meter_denom_port;
+    float*       active_steps_out;
 } StepGate;
 
 static inline double
@@ -119,21 +133,36 @@ static void
 handle_position(StepGate* self, const LV2_Atom_Object* obj)
 {
     const URIs* uris = &self->uris;
-    const LV2_Atom* bpm   = NULL;
-    const LV2_Atom* beat  = NULL;
-    const LV2_Atom* speed = NULL;
-    const LV2_Atom* frame = NULL;
+    const LV2_Atom* bpm      = NULL;
+    const LV2_Atom* beat     = NULL;
+    const LV2_Atom* speed    = NULL;
+    const LV2_Atom* frame    = NULL;
+    const LV2_Atom* bpb      = NULL;
+    const LV2_Atom* bunit    = NULL;
+    const LV2_Atom* bar      = NULL;
+    const LV2_Atom* bar_beat = NULL;
     lv2_atom_object_get(obj,
                         uris->time_beatsPerMinute, &bpm,
                         uris->time_beat,           &beat,
                         uris->time_speed,          &speed,
                         uris->time_frame,          &frame,
+                        uris->time_beatsPerBar,    &bpb,
+                        uris->time_beatUnit,       &bunit,
+                        uris->time_bar,            &bar,
+                        uris->time_barBeat,        &bar_beat,
                         0);
-    stepgate_dsp_update_position(self->dsp,
-                                 bpm   != NULL, get_atom_double(bpm,   uris),
-                                 beat  != NULL, get_atom_double(beat,  uris),
-                                 speed != NULL, get_atom_double(speed, uris),
-                                 frame != NULL, get_atom_double(frame, uris));
+
+    StepGatePosition pos;
+    memset(&pos, 0, sizeof(pos));
+    pos.have_bpm           = (bpm      != NULL); pos.bpm           = get_atom_double(bpm,      uris);
+    pos.have_beat          = (beat     != NULL); pos.beat          = get_atom_double(beat,     uris);
+    pos.have_speed         = (speed    != NULL); pos.speed         = get_atom_double(speed,    uris);
+    pos.have_frame         = (frame    != NULL); pos.frame         = get_atom_double(frame,    uris);
+    pos.have_beats_per_bar = (bpb      != NULL); pos.beats_per_bar = get_atom_double(bpb,      uris);
+    pos.have_beat_unit     = (bunit    != NULL); pos.beat_unit     = (int)get_atom_double(bunit, uris);
+    pos.have_bar           = (bar      != NULL); pos.bar           = (long long)get_atom_double(bar, uris);
+    pos.have_bar_beat      = (bar_beat != NULL); pos.bar_beat      = get_atom_double(bar_beat, uris);
+    stepgate_dsp_update_position(self->dsp, &pos);
 }
 
 static LV2_Handle
@@ -172,6 +201,10 @@ instantiate(const LV2_Descriptor* descriptor,
     u->time_beatsPerMinute = map->map(map->handle, LV2_TIME__beatsPerMinute);
     u->time_speed          = map->map(map->handle, LV2_TIME__speed);
     u->time_frame          = map->map(map->handle, LV2_TIME__frame);
+    u->time_beatsPerBar    = map->map(map->handle, LV2_TIME__beatsPerBar);
+    u->time_beatUnit       = map->map(map->handle, LV2_TIME__beatUnit);
+    u->time_bar            = map->map(map->handle, LV2_TIME__bar);
+    u->time_barBeat        = map->map(map->handle, LV2_TIME__barBeat);
 
     self->dsp = stepgate_dsp_new(rate);
     if (!self->dsp) {
@@ -202,7 +235,12 @@ connect_port(LV2_Handle instance, uint32_t port, void* data)
             else if (port == PORT_DECAY)   self->decay_port   = (const float*)data;
             else if (port == PORT_SUSTAIN) self->sustain_port = (const float*)data;
             else if (port == PORT_RELEASE) self->release_port = (const float*)data;
-            else if (port == PORT_DIV_MOD) self->div_mod_port = (const float*)data;
+            else if (port == PORT_DIV_MOD)      self->div_mod_port      = (const float*)data;
+            else if (port == PORT_PATTERN_MODE) self->pattern_mode_port = (const float*)data;
+            else if (port == PORT_METER_SOURCE) self->meter_source_port = (const float*)data;
+            else if (port == PORT_METER_NUM)    self->meter_num_port    = (const float*)data;
+            else if (port == PORT_METER_DENOM)  self->meter_denom_port  = (const float*)data;
+            else if (port == PORT_ACTIVE_STEPS) self->active_steps_out  = (float*)data;
             else if (port >= PORT_STEP_BASE && port < PORT_STEP_BASE + NUM_STEPS * 2u) {
                 uint32_t local = port - PORT_STEP_BASE;
                 uint32_t step  = local / 2u;
@@ -249,19 +287,27 @@ run(LV2_Handle instance, uint32_t n_samples)
     p.decay       = self->decay_port   ? *self->decay_port   : 0.0f;
     p.sustain     = self->sustain_port ? *self->sustain_port : 1.0f;
     p.release     = self->release_port ? *self->release_port : 0.5f;
+    p.pattern_mode = self->pattern_mode_port ? *self->pattern_mode_port : 0.0f;
+    p.meter_source = self->meter_source_port ? *self->meter_source_port : 0.0f;
+    p.meter_num    = self->meter_num_port    ? *self->meter_num_port    : 4.0f;
+    p.meter_denom  = self->meter_denom_port  ? *self->meter_denom_port  : 4.0f;
     for (int k = 0; k < NUM_STEPS; ++k) {
         p.step_on[k]  = self->step_on[k]  ? *self->step_on[k]  : 0.0f;
         p.step_tie[k] = self->step_tie[k] ? *self->step_tie[k] : 0.0f;
     }
 
+    int active_steps = NUM_STEPS;
     const int display_step =
         stepgate_dsp_process(self->dsp, &p,
                              self->audio_in_l, self->audio_in_r,
                              self->audio_out_l, self->audio_out_r,
-                             n_samples);
+                             &active_steps, n_samples);
 
     if (self->current_step_out) {
         *self->current_step_out = (float)display_step;
+    }
+    if (self->active_steps_out) {
+        *self->active_steps_out = (float)active_steps;
     }
 }
 
