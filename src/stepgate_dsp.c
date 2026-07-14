@@ -309,8 +309,10 @@ stepgate_dsp_update_position(StepGateDsp* self, const StepGatePosition* p)
      *
      * time:frame is continuous (sample-precise) when present and is
      * preferred whenever the host supplies it together with a BPM. */
+    int frame_drove_beat = 0;
     if (p->have_frame && self->host_bpm > 0.0) {
         self->host_beat = p->frame * self->host_bpm / (60.0 * self->sample_rate);
+        frame_drove_beat = 1;
     } else if (p->have_beat) {
         double v = p->beat;
         if (!self->has_prev_beat || v != self->prev_received_beat) {
@@ -322,19 +324,26 @@ stepgate_dsp_update_position(StepGateDsp* self, const StepGatePosition* p)
 
     /* Bar reference for the bar-aligned pattern modes.
      *
-     * JUCE hands us the bar start directly. LV2 hosts give barBeat:
-     * prefer (received beat - received barBeat), NOT the integrated
-     * host_beat, because when mod-host quantises time:beat to integers
-     * it quantises time:barBeat the same way, so their difference is
-     * the exact integer bar start even between ticks. Hosts like
-     * Ardour omit time:beat entirely and only provide time:frame +
-     * time:barBeat: anchor on the beat counter we just derived above
-     * (both values are continuous there, so the difference is exact). */
+     * JUCE hands us the bar start directly. LV2 hosts give barBeat; the
+     * anchor must live on the same axis as whatever drives host_beat:
+     *
+     * - Frame-driven hosts (frame preferred above): anchor on the beat
+     *   just derived from time:frame. This is REQUIRED for mod-host,
+     *   whose time:beat is not a global counter at all - it forges
+     *   (pos.beat - 1), i.e. the beat WITHIN the bar, so subtracting
+     *   barBeat from it would pin every bar to ~0 instead of the real
+     *   bar start.
+     * - Beat-driven hosts: use (received beat - received barBeat), NOT
+     *   the integrated host_beat, so a host that quantises time:beat
+     *   to integers (and time:barBeat the same way) cancels its own
+     *   quantisation and the difference is the exact bar start.
+     * - Hosts like Ardour omit time:beat entirely (frame + barBeat
+     *   only): the frame-driven anchor covers them too. */
     if (p->have_bar_start) {
         self->host_bar_start = p->bar_start;
         self->has_bar_ref    = 1;
     } else if (p->have_bar_beat) {
-        if (p->have_beat) {
+        if (!frame_drove_beat && p->have_beat) {
             self->host_bar_start = p->beat - p->bar_beat;
         } else {
             self->host_bar_start = self->host_beat - p->bar_beat;

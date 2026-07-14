@@ -58,8 +58,11 @@ enum {
     HOST_NONE    = -1,  /* no events at all (pure free-run test)        */
     HOST_FULL    = 0,   /* beat + barBeat + bar + beatUnit (no frame)   */
     HOST_MINIMAL = 1,   /* frame + bpm + beatsPerBar only               */
-    HOST_NOBEAT  = 2    /* Ardour-style: frame + bpm + beatsPerBar +
+    HOST_NOBEAT  = 2,   /* Ardour-style: frame + bpm + beatsPerBar +
                            beatUnit + bar + barBeat, but NO time:beat   */
+    HOST_MODHOST = 3    /* mod-host: everything, but time:beat is the
+                           integer beat WITHIN the bar (pos.beat - 1),
+                           not a global counter                          */
 };
 
 /* One Position event: beat/barBeat in transport (beatUnit) units.
@@ -88,6 +91,12 @@ forge_position(uint8_t* buf, int style, double bpm, double beat,
         lv2_atom_forge_key(&forge, U_beat); lv2_atom_forge_double(&forge, b);
     } else {
         lv2_atom_forge_key(&forge, U_frame); lv2_atom_forge_long(&forge, frame);
+    }
+    if (style == HOST_MODHOST) {
+        /* mod-host's time:beat = pos.beat - 1: the integer beat inside
+         * the current bar, NOT the global running beat. */
+        lv2_atom_forge_key(&forge, U_beat);
+        lv2_atom_forge_double(&forge, floor(barbeat));
     }
     if (style != HOST_MINIMAL) {
         lv2_atom_forge_key(&forge, U_bu);      lv2_atom_forge_int(&forge, bu);
@@ -169,6 +178,10 @@ main(void)
         /* Free Run + Auto: the host meter still applies (its clock
          * doesn't, so alignment is arithmetic from the enable reset). */
         { "free 5/4 auto",   1, HOST_FULL,    120.0,  5, 4, 0, 0,   2,  1,   0,  4, 4,  5, 1 },
+        /* mod-host: frame-driven, time:beat is bar-relative. */
+        { "5/4 mod-host",    0, HOST_MODHOST, 120.0,  5, 4, 0, 0,   3,  1,   0,  4, 4, 10, 1 },
+        { "7/4 mod-host",    0, HOST_MODHOST, 120.0,  7, 4, 0, 0,   3,  1,   0,  4, 4, 14, 1 },
+        { "3/4 mod-host",    0, HOST_MODHOST, 120.0,  3, 4, 0, 0,   4,  1,   0,  4, 4, 12, 1 },
     };
     const int nscen = (int)(sizeof(scen) / sizeof(scen[0]));
 
