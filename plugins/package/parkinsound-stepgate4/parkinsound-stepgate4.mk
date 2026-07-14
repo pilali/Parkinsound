@@ -13,7 +13,7 @@
 # the repository root to point it at the current git HEAD.
 ################################################################################
 
-PARKINSOUND_STEPGATE4_VERSION = c49775561378cbe8142971eee5096baaa4d8c1b2
+PARKINSOUND_STEPGATE4_VERSION = 90c974df0fd5d33c5aaab9fb335d1e87aa800d33
 PARKINSOUND_STEPGATE4_SITE = $(call github,pilali,Parkinsound,$(PARKINSOUND_STEPGATE4_VERSION))
 PARKINSOUND_STEPGATE4_BUNDLES = parkinsound-stepgate4.lv2
 
