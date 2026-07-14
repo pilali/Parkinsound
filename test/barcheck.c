@@ -50,13 +50,23 @@ urid_map(LV2_URID_Map_Handle handle, const char* uri)
     return (LV2_URID)(g_uris_n++);
 }
 
-static LV2_URID U_pos, U_bpm, U_beat, U_speed, U_bpb, U_bu, U_bar, U_barbeat;
+static LV2_URID U_pos, U_bpm, U_beat, U_speed, U_frame, U_bpb, U_bu, U_bar, U_barbeat;
+
+/* Which time:Position fields the simulated host transmits. Real hosts
+ * differ a lot here; the plug-in must adapt with any of them. */
+enum {
+    HOST_NONE    = -1,  /* no events at all (pure free-run test)        */
+    HOST_FULL    = 0,   /* beat + barBeat + bar + beatUnit (no frame)   */
+    HOST_MINIMAL = 1,   /* frame + bpm + beatsPerBar only               */
+    HOST_NOBEAT  = 2    /* Ardour-style: frame + bpm + beatsPerBar +
+                           beatUnit + bar + barBeat, but NO time:beat   */
+};
 
 /* One Position event: beat/barBeat in transport (beatUnit) units.
  * quantised != 0 mimics mod-host: integer beat / barBeat. */
 static void
-forge_position(uint8_t* buf, double bpm, double beat,
-               double bpb, int bu, int quantised)
+forge_position(uint8_t* buf, int style, double bpm, double beat,
+               long frame, double bpb, int bu, int quantised)
 {
     static LV2_URID_Map map = { NULL, urid_map };
     LV2_Atom_Forge forge;
@@ -71,13 +81,19 @@ forge_position(uint8_t* buf, double bpm, double beat,
     long   barno = (long)floor(b / bpb + 1e-9);
     double barbeat = b - (double)barno * bpb;
 
-    lv2_atom_forge_key(&forge, U_bpm);     lv2_atom_forge_float(&forge, (float)bpm);
-    lv2_atom_forge_key(&forge, U_beat);    lv2_atom_forge_double(&forge, b);
-    lv2_atom_forge_key(&forge, U_speed);   lv2_atom_forge_float(&forge, 1.0f);
-    lv2_atom_forge_key(&forge, U_bpb);     lv2_atom_forge_float(&forge, (float)bpb);
-    lv2_atom_forge_key(&forge, U_bu);      lv2_atom_forge_int(&forge, bu);
-    lv2_atom_forge_key(&forge, U_bar);     lv2_atom_forge_long(&forge, barno);
-    lv2_atom_forge_key(&forge, U_barbeat); lv2_atom_forge_float(&forge, (float)barbeat);
+    lv2_atom_forge_key(&forge, U_bpm);   lv2_atom_forge_float(&forge, (float)bpm);
+    lv2_atom_forge_key(&forge, U_speed); lv2_atom_forge_float(&forge, 1.0f);
+    lv2_atom_forge_key(&forge, U_bpb);   lv2_atom_forge_float(&forge, (float)bpb);
+    if (style == HOST_FULL) {
+        lv2_atom_forge_key(&forge, U_beat); lv2_atom_forge_double(&forge, b);
+    } else {
+        lv2_atom_forge_key(&forge, U_frame); lv2_atom_forge_long(&forge, frame);
+    }
+    if (style != HOST_MINIMAL) {
+        lv2_atom_forge_key(&forge, U_bu);      lv2_atom_forge_int(&forge, bu);
+        lv2_atom_forge_key(&forge, U_bar);     lv2_atom_forge_long(&forge, barno);
+        lv2_atom_forge_key(&forge, U_barbeat); lv2_atom_forge_float(&forge, (float)barbeat);
+    }
 
     lv2_atom_forge_pop(&forge, &obj_frame);
     lv2_atom_forge_pop(&forge, &seq_frame);
@@ -97,7 +113,8 @@ forge_empty(uint8_t* buf)
 
 typedef struct {
     const char* name;
-    int    free_run;       /* sync_source = 1, no events, manual meter   */
+    int    free_run;       /* sync_source = 1 (internal clock)           */
+    int    style;          /* HOST_* event profile (HOST_NONE = silent)  */
     double bpm;            /* transport-unit BPM sent by the "host"      */
     double bpb;            /* host beatsPerBar (transport units)         */
     int    bu;             /* host beatUnit                              */
@@ -124,6 +141,7 @@ main(void)
     U_bpm     = urid_map(NULL, "http://lv2plug.in/ns/ext/time#beatsPerMinute");
     U_beat    = urid_map(NULL, "http://lv2plug.in/ns/ext/time#beat");
     U_speed   = urid_map(NULL, "http://lv2plug.in/ns/ext/time#speed");
+    U_frame   = urid_map(NULL, "http://lv2plug.in/ns/ext/time#frame");
     U_bpb     = urid_map(NULL, "http://lv2plug.in/ns/ext/time#beatsPerBar");
     U_bu      = urid_map(NULL, "http://lv2plug.in/ns/ext/time#beatUnit");
     U_bar     = urid_map(NULL, "http://lv2plug.in/ns/ext/time#bar");
@@ -134,16 +152,23 @@ main(void)
     const LV2_Feature* features[] = { &map_feat, NULL };
 
     static const Scenario scen[] = {
-        /* name              free bpm  bpb bu q  bpb2 div mode src num den exp align */
-        { "3/4  1/16 1bar",  0, 120.0, 3, 4, 0, 0,   4,  1,   0,  4, 4, 12, 1 },
-        { "6/8  1/16 1bar",  0, 240.0, 6, 8, 0, 0,   4,  1,   0,  4, 4, 12, 1 },
-        { "5/4  1/4  1bar",  0, 120.0, 5, 4, 0, 0,   2,  1,   0,  4, 4,  5, 1 },
-        { "7/4  1/8  1bar",  0, 120.0, 7, 4, 0, 0,   3,  1,   0,  4, 4, 14, 1 },
-        { "7/4  1/16 clamp", 0, 120.0, 7, 4, 0, 0,   4,  1,   0,  4, 4, 16, 0 },
-        { "3/4  quantised",  0, 120.0, 3, 4, 1, 0,   4,  1,   0,  4, 4, 12, 1 },
-        { "4/4->3/4 switch", 0, 120.0, 4, 4, 0, 3,   4,  1,   0,  4, 4, 12, 0 },
-        { "3/4  1/8  2bars", 0, 120.0, 3, 4, 0, 0,   3,  2,   0,  4, 4, 12, 0 },
-        { "free 5/4 manual", 1, 120.0, 0, 4, 0, 0,   2,  1,   1,  5, 4,  5, 0 },
+        /* name              free style        bpm    bpb bu q  bpb2 div mode src num den exp align */
+        { "3/4  1/16 1bar",  0, HOST_FULL,    120.0,  3, 4, 0, 0,   4,  1,   0,  4, 4, 12, 1 },
+        { "6/8  1/16 1bar",  0, HOST_FULL,    240.0,  6, 8, 0, 0,   4,  1,   0,  4, 4, 12, 1 },
+        { "5/4  1/4  1bar",  0, HOST_FULL,    120.0,  5, 4, 0, 0,   2,  1,   0,  4, 4,  5, 1 },
+        { "7/4  1/8  1bar",  0, HOST_FULL,    120.0,  7, 4, 0, 0,   3,  1,   0,  4, 4, 14, 1 },
+        { "7/4  1/16 clamp", 0, HOST_FULL,    120.0,  7, 4, 0, 0,   4,  1,   0,  4, 4, 16, 0 },
+        { "3/4  quantised",  0, HOST_FULL,    120.0,  3, 4, 1, 0,   4,  1,   0,  4, 4, 12, 1 },
+        { "4/4->3/4 switch", 0, HOST_FULL,    120.0,  4, 4, 0, 3,   4,  1,   0,  4, 4, 12, 0 },
+        { "3/4  1/8  2bars", 0, HOST_FULL,    120.0,  3, 4, 0, 0,   3,  2,   0,  4, 4, 12, 0 },
+        { "free 5/4 manual", 1, HOST_NONE,    120.0,  0, 4, 0, 0,   2,  1,   1,  5, 4,  5, 0 },
+        /* Real-host variants: fields many hosts omit. */
+        { "5/4 frame-only",  0, HOST_MINIMAL, 120.0,  5, 4, 0, 0,   3,  1,   0,  4, 4, 10, 1 },
+        { "7/4 ardour-like", 0, HOST_NOBEAT,  120.0,  7, 4, 0, 0,   3,  1,   0,  4, 4, 14, 1 },
+        { "6/8 ardour-like", 0, HOST_NOBEAT,  240.0,  6, 8, 0, 0,   4,  1,   0,  4, 4, 12, 1 },
+        /* Free Run + Auto: the host meter still applies (its clock
+         * doesn't, so alignment is arithmetic from the enable reset). */
+        { "free 5/4 auto",   1, HOST_FULL,    120.0,  5, 4, 0, 0,   2,  1,   0,  4, 4,  5, 1 },
     };
     const int nscen = (int)(sizeof(scen) / sizeof(scen[0]));
 
@@ -200,9 +225,10 @@ main(void)
 
         for (long n = 0; n < total; ++n) {
             double bpb = (S->bpb2 > 0.0 && n >= switch_at) ? S->bpb2 : S->bpb;
-            if (!S->free_run && (n % EVERY) == 0) {
+            if (S->style != HOST_NONE && (n % EVERY) == 0) {
                 double beat = (double)n * S->bpm / (60.0 * SR);
-                forge_position(atom_buf, S->bpm, beat, bpb, S->bu, S->quantised);
+                forge_position(atom_buf, S->style, S->bpm, beat, n,
+                               bpb, S->bu, S->quantised);
             } else {
                 forge_empty(atom_buf);
             }

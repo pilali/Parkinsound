@@ -120,16 +120,20 @@ resolve_meter(const StepGateDsp* self, int host_sync,
     /* Transport-beat -> quarter-note normalisation. In a 6/8 host,
      * time:beat counts eighth notes, so one transport beat is 4/8 of a
      * quarter. Free-run counters are kept in quarters by construction. */
-    const int bu = (host_sync && self->host_beat_unit > 0)
-                       ? self->host_beat_unit : 4;
-    mi->qs = 4.0 / (double)bu;
+    const int    bu  = (self->host_beat_unit > 0) ? self->host_beat_unit : 4;
+    const double hqs = 4.0 / (double)bu;
+    mi->qs = host_sync ? hqs : 1.0;
 
     const int manual = ((int)lroundf(meter_source) == 1);
     const int mnum   = clampi((int)lroundf(meter_num), 1, 16);
     const int mden   = clampi((int)lroundf(meter_denom), 1, 16);
 
-    if (!manual && host_sync && self->host_beats_per_bar > 0.0) {
-        mi->bar_len_q = self->host_beats_per_bar * mi->qs;
+    /* Auto follows the host meter whenever the host has announced one,
+     * including in Free Run (the free clock is ours but the signature
+     * is still musical information worth following); the manual ports
+     * are the fallback for silent hosts. */
+    if (!manual && self->host_beats_per_bar > 0.0) {
+        mi->bar_len_q = self->host_beats_per_bar * hqs;
     } else {
         mi->bar_len_q = (double)mnum * 4.0 / (double)mden;
     }
@@ -318,17 +322,24 @@ stepgate_dsp_update_position(StepGateDsp* self, const StepGatePosition* p)
 
     /* Bar reference for the bar-aligned pattern modes.
      *
-     * JUCE hands us the bar start directly. LV2 hosts give barBeat: use
-     * (received beat - received barBeat), NOT the integrated host_beat,
-     * because when mod-host quantises time:beat to integers it
-     * quantises time:barBeat the same way, so their difference is the
-     * exact integer bar start even between ticks. */
+     * JUCE hands us the bar start directly. LV2 hosts give barBeat:
+     * prefer (received beat - received barBeat), NOT the integrated
+     * host_beat, because when mod-host quantises time:beat to integers
+     * it quantises time:barBeat the same way, so their difference is
+     * the exact integer bar start even between ticks. Hosts like
+     * Ardour omit time:beat entirely and only provide time:frame +
+     * time:barBeat: anchor on the beat counter we just derived above
+     * (both values are continuous there, so the difference is exact). */
     if (p->have_bar_start) {
         self->host_bar_start = p->bar_start;
         self->has_bar_ref    = 1;
-    } else if (p->have_bar_beat && p->have_beat) {
-        self->host_bar_start = p->beat - p->bar_beat;
-        self->has_bar_ref    = 1;
+    } else if (p->have_bar_beat) {
+        if (p->have_beat) {
+            self->host_bar_start = p->beat - p->bar_beat;
+        } else {
+            self->host_bar_start = self->host_beat - p->bar_beat;
+        }
+        self->has_bar_ref = 1;
     }
 }
 

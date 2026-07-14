@@ -12,10 +12,23 @@ in the *1 Bar* / *2 Bars* modes the effective pattern length is derived
 from the meter (12 sixteenths in 3/4 or 6/8, 14 eighths in 7/4, capped at
 16) and step 1 is pinned to the bar start. The meter comes from the host
 (`time:beatsPerBar` / `time:beatUnit` in LV2, the DAW time signature in
-VST3/AU) or from the manual `meter_num` / `meter_denom` ports (also the
-Free Run fallback). The `active_steps` output reports the effective
-length, and the UIs grey out the unused steps. Hosts that count in a
-non-quarter beat unit (e.g. 6/8) are now normalised correctly.
+VST3/AU) or from the manual `meter_num` / `meter_denom` ports (used when
+`meter_source` is *Manual*, or when the host never announces a meter).
+The `active_steps` output reports the effective length, and the UIs grey
+out the unused steps. Hosts that count in a non-quarter beat unit
+(e.g. 6/8) are now normalised correctly.
+
+Two things to know when the pattern seems not to adapt in *Auto*:
+
+- **16-step ceiling**: a bar longer than 16 steps is capped. In 5/4 the
+  default 1/16 division needs 20 steps and 7/4 needs 28, so both show
+  all 16 steps (the remainder wraps mid-bar). Pick 1/8 (10 and 14
+  steps) or coarser to see odd meters adapt.
+- **Silent hosts**: some plugin hosts never transmit a time signature
+  (Carla's internal transport is fixed 4/4; MOD sends its global
+  *Beats Per Bar*; DAWs send theirs). With a silent host, *Auto* falls
+  back to the manual `meter_num`/`meter_denom` ports - set them and
+  everything else works the same.
 
 - **LV2** — Linux desktop, MOD Audio, Raspberry Pi...
 - **VST3 / AU / Standalone** — macOS (universal) and Windows, via JUCE

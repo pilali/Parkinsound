@@ -247,8 +247,19 @@ non cliquables). Recommandé : grisage, géométrie inchangée.
 - **Changement de signature en cours de lecture** : `active_steps` change de
   valeur → le modulo saute. Comportement défini : recalage immédiat sur la
   nouvelle grille au prochain début de mesure.
-- **Free Run** : pas de transport → la signature manuelle (`meter_num/denom`)
-  fait foi ; `meter_source=Auto` sans donnée hôte retombe sur 4/4.
+- **Free Run** : l'horloge est interne, mais en `Auto` la signature
+  annoncée par l'hôte reste suivie (c'est une information musicale,
+  pas une information d'horloge) ; sans donnée hôte, les ports manuels
+  (`meter_num/denom`, défaut 4/4) font foi.
+- **Champs omis par les hôtes réels** : Ardour n'envoie pas `time:beat`
+  (seulement `frame` + `barBeat`) → la référence de mesure doit aussi
+  pouvoir s'ancrer sur le beat intégré depuis `time:frame` ; d'autres
+  hôtes n'envoient que `frame` + `bpm` + `beatsPerBar` ; Carla
+  (transport interne) n'annonce aucune signature → repli manuel.
+- **Plafond 16 pas, cas trompeur** : en 5/4 (20 pas) ou 7/4 (28 pas)
+  avec la division 1/16 *par défaut*, le plafonnement à 16 donne
+  l'apparence d'une absence d'adaptation ; en 1/8 les 10 / 14 pas
+  actifs apparaissent immédiatement.
 
 ---
 
